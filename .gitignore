@@ -1,0 +1,31 @@
+.idea
+tmp
+main
+logs/* 
+uploads/*
+settings.yaml
+
+# GoLand
+.idea/
+
+# VSCode
+.vscode/
+
+# Build
+bin/
+dist/
+build/
+
+# Log
+logs/
+log/
+*.log
+
+# Upload
+uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+.git
