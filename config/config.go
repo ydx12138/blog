@@ -2,7 +2,8 @@ package config
 
 import (
 	"blog/flags"
-	"time"
+	"fmt"
+	"strconv"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -24,26 +25,39 @@ type MysqlConfig struct {
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 }
+
+func (m MysqlConfig) DSN() string {
+	return m.User + ":" + m.Password + "@tcp(" + m.Host + ":" + strconv.Itoa(m.Port) + ")/" + m.Db + "?charset=utf8&parseTime=true"
+
+}
+
 type SystemConfig struct {
+	Host string `mapstructure:"host"`
 	Port int    `mapstructure:"port"`
 	Env  string `mapstructure:"env"`
 }
+
+func (s SystemConfig) Address() string {
+	return fmt.Sprintf("%s:%d", s.Host, s.Port)
+}
+
 type LogConfig struct {
 	App   string `mapstructure:"app"`
 	Dir   string `mapstructure:"dir"`
 	Level string `mapstructure:"level"`
 }
-type ServerConfig struct {
-	Port int `mapstructure:"port"`
-}
 
-type CORSConfig struct {
+/*type ServerConfig struct {
+	Port int `mapstructure:"port"`
+}*/
+
+/*type CORSConfig struct {
 	AllowOrigins     []string      `mapstructure:"allow_origins"`
 	AllowMethods     []string      `mapstructure:"allow_methods"`
 	AllowHeaders     []string      `mapstructure:"allow_headers"`
 	AllowCredentials bool          `mapstructure:"allow_credentials"`
 	MaxAge           time.Duration `mapstructure:"max_age"`
-}
+}*/
 
 var Cfg *Config
 

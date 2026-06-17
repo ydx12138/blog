@@ -6,7 +6,6 @@ import (
 	"blog/flags"
 	"blog/router"
 
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -27,7 +26,11 @@ func main() {
 	//迁移表
 	//core.InitModel()
 	//注册路由
-	r := gin.New()
-	router.Register(r, core.DB)
-	zap.L().Debug("xxx")
+	r := router.Register()
+	zap.L().Debug("gin运行在" + config.Cfg.SystemConfig.Address())
+	err = r.Run(config.Cfg.SystemConfig.Address())
+	if err != nil {
+		zap.L().Error("路由加载失败" + err.Error())
+		return
+	}
 }

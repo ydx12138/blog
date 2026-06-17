@@ -14,8 +14,8 @@ type Article struct {
 	CategoryID uint64   `gorm:"comment:类别ID"`
 	Category   Category //不在表里
 
-	AuthorID uint64 `gorm:"作者ID"`
-	Author   User   //不在表里
+	AuthorID uint64 `gorm:"comment:作者ID"`
+	Author   Admin  //不在表里
 
 	ViewCount    uint64 `gorm:"default:0;comment:浏览数"`
 	LikeCount    uint64 `gorm:"default:0;comment:点赞数"`

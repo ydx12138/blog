@@ -6,6 +6,7 @@ type Token struct {
 	ID uint64 `gorm:"primaryKey"`
 
 	UserID uint64 `gorm:"uniqueIndex;not null;comment:token所属用户ID"`
+	User   User
 
 	Token string `gorm:"size:512;not null"`
 
