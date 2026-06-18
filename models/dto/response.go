@@ -1,12 +1,6 @@
 package dto
 
-import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-)
-
-type response struct {
+/*type response struct {
 	Code int    `json:"code"`
 	Data any    `json:"data"`
 	Msg  string `json:"msg"`
@@ -30,3 +24,4 @@ func OkWithData(data any, c *gin.Context) {
 func OkWithMsg(msg string, c *gin.Context) {
 	Result(0, "", msg, c)
 }
+*/

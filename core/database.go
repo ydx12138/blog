@@ -19,7 +19,7 @@ func DataBaseInit() {
 	//DSN := config.Cfg.MysqlConfig.User + ":" + config.Cfg.MysqlConfig.Password + "@tcp(" + config.Cfg.MysqlConfig.Host + ":" + strconv.Itoa(config.Cfg.MysqlConfig.Port) + ")/" + config.Cfg.MysqlConfig.Db + "?charset=utf8&parseTime=true"
 	var err error
 	var level logger.LogLevel = logger.Info
-	switch config.Cfg.LogConfig.Level {
+	switch config.Cfg.MysqlConfig.Log_level {
 	case "info":
 		level = logger.Info
 	case "warn":

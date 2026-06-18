@@ -9,5 +9,9 @@ package request
 	}
 */
 type PageQuery struct {
-	Page int `form:"page" binding:"gte=1"`
+	Page int `form:"page" binding:"required;gte=1"`
+}
+
+type ArticleKeyWord struct {
+	Keyword string `form:"keyword" binding:"required"`
 }

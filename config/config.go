@@ -19,11 +19,12 @@ type Config struct {
 }
 
 type MysqlConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Db       string `mapstructure:"db"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
+	Host      string `mapstructure:"host"`
+	Port      int    `mapstructure:"port"`
+	Db        string `mapstructure:"db"`
+	User      string `mapstructure:"user"`
+	Password  string `mapstructure:"password"`
+	Log_level string `mapstructure:"log_level"`
 }
 
 func (m MysqlConfig) DSN() string {

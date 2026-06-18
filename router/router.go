@@ -17,6 +17,7 @@ func Register() *gin.Engine {
 	public := api.Group("")
 
 	public.GET("/articles", service.GetArticles)
-
+	public.GET("/articles/detail", service.GetArticle)
+	public.GET("/articles/search", service.SearchArticle)
 	return r
 }
