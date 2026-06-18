@@ -20,3 +20,10 @@ type AdminLogin struct {
 	Username string `form:"username" json:"username" binding:"required"`
 	Password string `form:"password" json:"password" binding:"required"`
 }
+
+type UserRegister struct {
+	Email      string `form:"username" json:"username" binding:"required,email"`
+	Password   string `form:"password" json:"password" binding:"required,min=6,max=10"`
+	Repassword string `form:"repassword" json:"re_password" binding:"required,min=6,max=10,eqfield=Password"`
+	Nickname   string `form:"nickname" json:"nickname"`
+}

@@ -2,13 +2,17 @@ package user
 
 import (
 	"blog/internal/dao"
+	"blog/internal/utils"
+	"blog/models"
 	"blog/models/dto"
 	"blog/models/vo"
 	"blog/pkg/code"
 	"blog/pkg/response"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // 首页返回按页码返回文章列表
@@ -72,4 +76,51 @@ func SearchArticle(c *gin.Context) {
 		return
 	}
 	response.SuccessWithData(articleSimples, c)
+}
+
+// 注册
+func Register(c *gin.Context) {
+	var user dto.UserRegister
+	err := c.ShouldBind(&user)
+	if err != nil {
+		zap.L().Error("Register:" + err.Error())
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+
+	//判断邮箱是否已注册
+	existUser, err := dao.GetUserByEmail(user.Email)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		zap.L().Error("Register查询用户失败:" + err.Error())
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if existUser.ID != 0 {
+		zap.L().Info(code.ErrUserExist.Message)
+		response.ErrWithMsg(code.ErrUserExist, c)
+		return
+	}
+
+	//加密
+	hashPassword, err := utils.HashPassword(user.Password)
+	if err != nil {
+		zap.L().Error("Register:" + err.Error())
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+
+	//存入数据库
+	newUser := models.User{
+		Email:    user.Email,
+		Password: hashPassword,
+		Nickname: user.Nickname,
+	}
+	err = dao.CreateUser(newUser)
+	if err != nil {
+		zap.L().Error("Register:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+
+	response.SuccessWithMsg("注册成功", c)
 }

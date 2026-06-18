@@ -15,6 +15,7 @@ var (
 	Forbidden     = ErrorCode{200, 1003, "无权限"}
 	NotFound      = ErrorCode{200, 1004, "资源不存在"}
 	InternalError = ErrorCode{200, 1005, "服务器内部错误"} //所有dao层err，全返回这个
+
 )
 
 // ========== 业务错误（按模块） ==========
@@ -24,6 +25,7 @@ var (
 	ErrUserExist    = ErrorCode{200, 2001, "用户已存在"}
 	ErrUserNotFound = ErrorCode{200, 2002, "用户不存在"}
 	ErrPassword     = ErrorCode{200, 2003, "密码错误"}
+	EmailRepeat     = ErrorCode{200, 2004, "邮箱已经存在"}
 )
 
 // 订单模块（示例）
