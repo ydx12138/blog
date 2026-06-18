@@ -1,9 +1,9 @@
-package service
+package user
 
 import (
 	"blog/internal/dao"
 	"blog/models/dto"
-	"blog/models/request"
+	"blog/models/vo"
 	"blog/pkg/code"
 	"blog/pkg/response"
 
@@ -14,7 +14,7 @@ import (
 // 首页返回按页码返回文章列表
 func GetArticles(c *gin.Context) {
 	//取参
-	var p request.PageQuery
+	var p dto.PageQuery
 	err := c.ShouldBindQuery(&p)
 	//参数出错
 	if err != nil {
@@ -37,7 +37,7 @@ func GetArticles(c *gin.Context) {
 // 根据id获取文章详情
 func GetArticle(c *gin.Context) {
 	//参数
-	var detail dto.ArticleDetail
+	var detail vo.ArticleDetail
 	err := c.ShouldBindQuery(&detail)
 	if err != nil {
 		zap.L().Error("GetArticlec参数错误" + err.Error())
@@ -57,7 +57,7 @@ func GetArticle(c *gin.Context) {
 
 // 文章搜索
 func SearchArticle(c *gin.Context) {
-	var key request.ArticleKeyWord
+	var key dto.ArticleKeyWord
 	err := c.ShouldBindQuery(&key)
 	if err != nil {
 		zap.L().Error("PostArticle参数错误:" + err.Error())

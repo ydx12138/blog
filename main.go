@@ -4,7 +4,7 @@ import (
 	"blog/config"
 	"blog/core"
 	"blog/flags"
-	"blog/router"
+	"blog/internal/router"
 
 	"go.uber.org/zap"
 )

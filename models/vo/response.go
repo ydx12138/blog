@@ -1,4 +1,4 @@
-package dto
+package vo
 
 /*type response struct {
 	Code int    `json:"code"`

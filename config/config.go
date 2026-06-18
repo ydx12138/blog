@@ -4,15 +4,20 @@ import (
 	"blog/flags"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
+var (
+	Cfg *Config
+)
+
 // 总的结构体
 type Config struct {
 	//Server       ServerConfig `mapstructure:"server"`
-	//CORS         CORSConfig   `mapstructure:"cors"`
+	CORS         CORSConfig   `mapstructure:"cors"`
 	SystemConfig SystemConfig `mapstructure:"system"`
 	LogConfig    LogConfig    `mapstructure:"log"`
 	MysqlConfig  MysqlConfig  `mapstructure:"mysql"`
@@ -52,15 +57,13 @@ type LogConfig struct {
 	Port int `mapstructure:"port"`
 }*/
 
-/*type CORSConfig struct {
+type CORSConfig struct {
 	AllowOrigins     []string      `mapstructure:"allow_origins"`
 	AllowMethods     []string      `mapstructure:"allow_methods"`
 	AllowHeaders     []string      `mapstructure:"allow_headers"`
 	AllowCredentials bool          `mapstructure:"allow_credentials"`
 	MaxAge           time.Duration `mapstructure:"max_age"`
-}*/
-
-var Cfg *Config
+}
 
 // LoadConfig 加载配置文件
 func LoadConfig() error {

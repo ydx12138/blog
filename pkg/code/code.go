@@ -14,7 +14,7 @@ var (
 	Unauthorized  = ErrorCode{200, 1002, "请先登录"}
 	Forbidden     = ErrorCode{200, 1003, "无权限"}
 	NotFound      = ErrorCode{200, 1004, "资源不存在"}
-	InternalError = ErrorCode{200, 1005, "服务器内部错误"}
+	InternalError = ErrorCode{200, 1005, "服务器内部错误"} //所有dao层err，全返回这个
 )
 
 // ========== 业务错误（按模块） ==========

@@ -3,14 +3,14 @@ package dao
 import (
 	"blog/core"
 	"blog/models"
-	"blog/models/dto"
+	"blog/models/vo"
 
 	"go.uber.org/zap"
 )
 
 // 按页码获取10条已发布的文章
-func GetArticleByPage(page int) ([]dto.ArticleSimple, error) {
-	var articleList []dto.ArticleSimple = make([]dto.ArticleSimple, 0)
+func GetArticleByPage(page int) ([]vo.ArticleSimple, error) {
+	var articleList []vo.ArticleSimple = make([]vo.ArticleSimple, 0)
 	//err := core.DB.Model(models.Article{}).Preload("Category").Limit(10).Offset((page-1)*10).Find(&articleList, "status = ?", 2).Error
 	err := core.DB.
 		Model(models.Article{}).
@@ -41,9 +41,9 @@ func GetArticleByPage(page int) ([]dto.ArticleSimple, error) {
 	return articleList, nil
 }
 
-func GetArticleDetail(id uint64) (dto.ArticleDetail, error) {
+func GetArticleDetail(id uint64) (vo.ArticleDetail, error) {
 	//core.DB.Model(models.Article{}).Find(&detail)
-	var detail dto.ArticleDetail
+	var detail vo.ArticleDetail
 	err := core.DB.
 		Model(models.Article{}).
 		Select(`
@@ -70,8 +70,8 @@ func GetArticleDetail(id uint64) (dto.ArticleDetail, error) {
 	return detail, nil
 }
 
-func SearchArticleByKey(keyword string) ([]dto.ArticleSimple, error) {
-	var articleList []dto.ArticleSimple = make([]dto.ArticleSimple, 0)
+func SearchArticleByKey(keyword string) ([]vo.ArticleSimple, error) {
+	var articleList []vo.ArticleSimple = make([]vo.ArticleSimple, 0)
 	err := core.DB.
 		Model(models.Article{}).
 		Select(`

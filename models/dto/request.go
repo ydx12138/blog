@@ -1,4 +1,4 @@
-package request
+package dto
 
 /*
 	type Articles struct {
@@ -9,9 +9,14 @@ package request
 	}
 */
 type PageQuery struct {
-	Page int `form:"page" binding:"required;gte=1"`
+	Page int `form:"page" binding:"required,gte=1"`
 }
 
 type ArticleKeyWord struct {
 	Keyword string `form:"keyword" binding:"required"`
+}
+
+type AdminLogin struct {
+	Username string `form:"username" json:"username" binding:"required"`
+	Password string `form:"password" json:"password" binding:"required"`
 }
