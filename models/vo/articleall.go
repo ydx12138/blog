@@ -20,10 +20,11 @@ type ArticleSimple struct {
 }
 
 type ArticleDetail struct {
-	ID           uint64     `json:"id" binding:"required,gte=1" form:"id"`
+	ID           uint64     `json:"id" form:"id"`
 	Title        string     `json:"title"`
 	Summary      string     `json:"summary"`
 	Content      string     `json:"content"`
+	ContentType  int8       `json:"content_type"`
 	Cover        string     `json:"cover"`
 	CategoryName string     `json:"category_name"`
 	ViewCount    uint64     `json:"view_count"`

@@ -17,9 +17,9 @@ import "time"
 
 type User struct {
 	ID        uint64 `gorm:"primaryKey"`
-	Username  string `gorm:"size:50;uniqueIndex;not null"`
+	Email     string `gorm:"size:100;uniqueIndex;not null"`
 	Password  string `gorm:"size:255;not null"`
 	Nickname  string `gorm:"size:50"`
-	Email     string `gorm:"size:100;uniqueIndex;not null"`
+	Status    uint64 `gorm:"default:1;comment:1正常，2封禁"`
 	CreatedAt time.Time
 }

@@ -25,7 +25,9 @@ func JWTAuth() gin.HandlerFunc {
 			})
 			return
 		}
-		//把userID传下去
+		// 把userID和role传下去
 		c.Set("userID", claims.UserID)
+		c.Set("role", claims.Role)
+		c.Next()
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"blog/pkg/code"
 	"blog/pkg/response"
 	"errors"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -17,45 +18,43 @@ import (
 
 // 首页返回按页码返回文章列表
 func GetArticles(c *gin.Context) {
-	//取参
-	var p dto.PageQuery
+	var p dto.PageQueryWithSize
 	err := c.ShouldBindQuery(&p)
-	//参数出错
 	if err != nil {
-		zap.L().Error("GetArticles参数错误" + err.Error())
-		response.ErrWithMsg(code.BadRequest, c)
-		return
+		p.Page = 1
 	}
-	//sql
-	articleSimpleList, err := dao.GetArticleByPage(p.Page)
-	//sql出错
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PageSize < 1 {
+		p.PageSize = 10
+	}
+	articleSimpleList, err := dao.GetArticleByPage(p.Page, p.PageSize)
 	if err != nil {
 		zap.L().Error("GetArticleByPage()" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
-	//返回文章列表
 	response.SuccessWithData(articleSimpleList, c)
 }
 
 // 根据id获取文章详情
 func GetArticle(c *gin.Context) {
-	//参数
 	var detail vo.ArticleDetail
 	err := c.ShouldBindQuery(&detail)
 	if err != nil {
-		zap.L().Error("GetArticlec参数错误" + err.Error())
+		zap.L().Error("GetArticle 参数错误:" + err.Error())
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
-	//sql
 	articleDetail, err := dao.GetArticleDetail(detail.ID)
-	//结果
 	if err != nil {
 		zap.L().Error("GetArticle:" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
+	// 增加浏览数
+	_ = dao.IncrementViewCount(detail.ID)
 	response.SuccessWithData(articleDetail, c)
 }
 
@@ -64,14 +63,13 @@ func SearchArticle(c *gin.Context) {
 	var key dto.ArticleKeyWord
 	err := c.ShouldBindQuery(&key)
 	if err != nil {
-		zap.L().Error("PostArticle参数错误:" + err.Error())
+		zap.L().Error("SearchArticle 参数错误:" + err.Error())
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
-	//sql
 	articleSimples, err := dao.SearchArticleByKey(key.Keyword)
 	if err != nil {
-		zap.L().Error("PostArticle:" + err.Error())
+		zap.L().Error("SearchArticle:" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
@@ -87,29 +85,29 @@ func Register(c *gin.Context) {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
-
-	//判断邮箱是否已注册
+	fmt.Println("1", user)
+	// 判断邮箱是否已注册
 	existUser, err := dao.GetUserByEmail(user.Email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		zap.L().Error("Register查询用户失败:" + err.Error())
-		response.ErrWithMsg(code.BadRequest, c)
+		zap.L().Error("Register 查询用户失败:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
 	if existUser.ID != 0 {
-		zap.L().Info(code.ErrUserExist.Message)
+		zap.L().Error("邮箱已经存在")
 		response.ErrWithMsg(code.ErrUserExist, c)
 		return
 	}
-
-	//加密
+	fmt.Println("2", user)
+	// 加密
 	hashPassword, err := utils.HashPassword(user.Password)
 	if err != nil {
-		zap.L().Error("Register:" + err.Error())
-		response.ErrWithMsg(code.BadRequest, c)
+		zap.L().Error("Register 密码加密失败:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
-
-	//存入数据库
+	fmt.Println("3", user)
+	// 存入数据库
 	newUser := models.User{
 		Email:    user.Email,
 		Password: hashPassword,
@@ -121,6 +119,83 @@ func Register(c *gin.Context) {
 		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
-
+	fmt.Println("4", user)
 	response.SuccessWithMsg("注册成功", c)
+}
+
+// 用户登录
+func Login(c *gin.Context) {
+	var login dto.UserLogin
+	err := c.ShouldBind(&login)
+	if err != nil {
+		zap.L().Error("User Login 参数错误:" + err.Error())
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	// 查询用户
+	user, err := dao.GetUserByEmail(login.Email)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.ErrWithMsg(code.ErrUserNotFound, c)
+		} else {
+			zap.L().Error("User Login 查询失败:" + err.Error())
+			response.ErrWithMsg(code.InternalError, c)
+		}
+		return
+	}
+	// 检查密码
+	if !utils.CheckPassword(user.Password, login.Password) {
+		response.ErrWithMsg(code.ErrPassword, c)
+		return
+	}
+	// 检查是否被封禁
+	if user.Status == 2 {
+		response.ErrWithMsg(code.Forbidden, c)
+		return
+	}
+	// 生成token
+	token, err := utils.GenerateToken(user.ID, "user")
+	if err != nil {
+		zap.L().Error("User Login 生成Token失败:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(map[string]interface{}{
+		"token":    token,
+		"email":    user.Email,
+		"nickname": user.Nickname,
+		"id":       user.ID,
+	}, c)
+}
+
+// 获取所有分类
+func GetCategories(c *gin.Context) {
+	categories, err := dao.GetAllCategories()
+	if err != nil {
+		zap.L().Error("GetCategories:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(categories, c)
+}
+
+// 根据分类获取文章
+func GetCategoryArticles(c *gin.Context) {
+	var q dto.CategoryArticlesQuery
+	err := c.ShouldBindQuery(&q)
+	if err != nil {
+		zap.L().Error("GetCategoryArticles 参数错误:" + err.Error())
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if q.Page < 1 {
+		q.Page = 1
+	}
+	articles, err := dao.GetArticleByCategory(q.CategoryID, q.Page, 10)
+	if err != nil {
+		zap.L().Error("GetCategoryArticles:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(articles, c)
 }
