@@ -55,7 +55,7 @@ func CreateComment(c *gin.Context) {
 		UserID:    userID.(uint64),
 		Content:   req.Content,
 		ParentID:  req.ParentID,
-		Status:    3, // 默认待审核
+		Status:    1, // 默认正常
 	}
 	err = dao.CreateComment(&comment)
 	if err != nil {
@@ -63,5 +63,7 @@ func CreateComment(c *gin.Context) {
 		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
-	response.SuccessWithMsg("评论成功，审核通过后显示", c)
+	// 同步文章评论数
+	_ = dao.UpdateArticleCommentCount(comment.ArticleID, 1)
+	response.SuccessWithMsg("评论成功", c)
 }

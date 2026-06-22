@@ -26,7 +26,7 @@ func GetAllComments(c *gin.Context) {
 		q.PageSize = 10
 	}
 	keyword := c.Query("keyword")
-	searchType := c.Query("type") // "nickname" or "content"
+	searchType := c.Query("type")
 	comments, total, err := dao.GetAllComments(q.Page, q.PageSize, keyword, searchType)
 	if err != nil {
 		zap.L().Error("GetAllComments:" + err.Error())
@@ -69,22 +69,20 @@ func parseID(c *gin.Context) (uint64, error) {
 	return strconv.ParseUint(c.Param("id"), 10, 64)
 }
 
-// ApproveComment 通过评论
+// ApproveComment 通过评论（待审核→正常）
 func ApproveComment(c *gin.Context) {
 	id, err := parseID(c)
 	if err != nil {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
-	// 获取评论信息
 	comment, err := dao.GetCommentByID(id)
 	if err != nil {
-		zap.L().Error("ApproveComment 评论不存在:" + err.Error())
 		response.ErrWithMsg(code.ErrCommentNotFound, c)
 		return
 	}
-	// 只有待审核(3)的评论通过才 +1
-	if comment.Status == 3 {
+	// 非正常→正常: +1
+	if comment.Status != 1 {
 		_ = dao.UpdateArticleCommentCount(comment.ArticleID, 1)
 	}
 	err = dao.UpdateCommentStatus(id, 1)
@@ -96,20 +94,29 @@ func ApproveComment(c *gin.Context) {
 	response.SuccessWithMsg("审核通过", c)
 }
 
-// RejectComment 拒绝评论
+// RejectComment 驳回评论（正常→待审核）
 func RejectComment(c *gin.Context) {
 	id, err := parseID(c)
 	if err != nil {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
-	err = dao.UpdateCommentStatus(id, 2)
+	comment, err := dao.GetCommentByID(id)
+	if err != nil {
+		response.ErrWithMsg(code.ErrCommentNotFound, c)
+		return
+	}
+	// 正常→待审核: -1
+	if comment.Status == 1 {
+		_ = dao.UpdateArticleCommentCount(comment.ArticleID, -1)
+	}
+	err = dao.UpdateCommentStatus(id, 3)
 	if err != nil {
 		zap.L().Error("RejectComment:" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
-	response.SuccessWithMsg("已拒绝", c)
+	response.SuccessWithMsg("已驳回", c)
 }
 
 // DeleteComment 删除评论
@@ -119,7 +126,6 @@ func DeleteComment(c *gin.Context) {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
-	// 获取评论信息，已通过的评论删除时 -1
 	comment, err := dao.GetCommentByID(id)
 	if err == nil && comment.Status == 1 {
 		_ = dao.UpdateArticleCommentCount(comment.ArticleID, -1)
@@ -133,7 +139,7 @@ func DeleteComment(c *gin.Context) {
 	response.SuccessWithMsg("删除成功", c)
 }
 
-// SetCommentStatus 设置评论状态（1正常 2隐藏 3待审核）
+// SetCommentStatus 设置评论状态（1正常 3待审核）
 func SetCommentStatus(c *gin.Context) {
 	id, err := parseID(c)
 	if err != nil {
@@ -143,9 +149,22 @@ func SetCommentStatus(c *gin.Context) {
 	var body struct {
 		Status int8 `json:"status"`
 	}
-	if c.ShouldBind(&body) != nil || (body.Status < 1 || body.Status > 3) {
+	if c.ShouldBind(&body) != nil || (body.Status != 1 && body.Status != 3) {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
+	}
+	old, err := dao.GetCommentByID(id)
+	if err != nil {
+		response.ErrWithMsg(code.ErrCommentNotFound, c)
+		return
+	}
+	// 正常→待审核: -1
+	if old.Status == 1 && body.Status != 1 {
+		_ = dao.UpdateArticleCommentCount(old.ArticleID, -1)
+	}
+	// 待审核→正常: +1
+	if old.Status != 1 && body.Status == 1 {
+		_ = dao.UpdateArticleCommentCount(old.ArticleID, 1)
 	}
 	err = dao.UpdateCommentStatus(id, body.Status)
 	if err != nil {
