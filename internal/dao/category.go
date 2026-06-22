@@ -58,3 +58,20 @@ func DeleteCategory(id uint64) error {
 	}
 	return nil
 }
+
+// GetOrCreateDefaultCategory 获取或创建默认分类"杂谈"
+func GetOrCreateDefaultCategory() (models.Category, error) {
+	var cat models.Category
+	err := core.DB.Where("name = ?", "杂谈").First(&cat).Error
+	if err == nil {
+		return cat, nil
+	}
+	// 不存在则创建
+	cat = models.Category{Name: "杂谈", Description: "未分类的杂谈文章", Sort: 0}
+	err = core.DB.Create(&cat).Error
+	if err != nil {
+		zap.L().Error("GetOrCreateDefaultCategory:" + err.Error())
+		return cat, err
+	}
+	return cat, nil
+}

@@ -97,3 +97,8 @@ type UserStatusReq struct {
 type IDReq struct {
 	ID uint64 `form:"id" uri:"id" json:"id" binding:"required"`
 }
+
+// ArticleLikeReq 点赞请求
+type ArticleLikeReq struct {
+	ArticleID uint64 `json:"article_id" binding:"required"`
+}

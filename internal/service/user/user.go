@@ -199,3 +199,32 @@ func GetCategoryArticles(c *gin.Context) {
 	}
 	response.SuccessWithData(articles, c)
 }
+
+// 获取所有已使用的标签
+func GetTags(c *gin.Context) {
+	tags, err := dao.GetAllTags()
+	if err != nil {
+		zap.L().Error("GetTags:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(tags, c)
+}
+
+// 点赞文章（直接+1，不限制次数）
+func LikeArticle(c *gin.Context) {
+	var req dto.ArticleLikeReq
+	err := c.ShouldBind(&req)
+	if err != nil {
+		zap.L().Error("LikeArticle 参数错误:" + err.Error())
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	err = dao.IncrementLikeCount(req.ArticleID)
+	if err != nil {
+		zap.L().Error("LikeArticle:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithMsg("点赞成功", c)
+}

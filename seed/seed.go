@@ -20,6 +20,7 @@ func Run() {
 		{ID: 4, Name: "周刊", Description: "每周技术动态与思考", Sort: 7},
 		{ID: 5, Name: "设计", Description: "UI设计、排版、视觉美学相关", Sort: 6},
 		{ID: 6, Name: "年度总结", Description: "年度回顾与技术趋势观察", Sort: 5},
+		{ID: 7, Name: "杂谈", Description: "未分类的杂谈文章", Sort: 1},
 	}
 	for _, c := range categories {
 		if err := core.DB.FirstOrCreate(&models.Category{}, models.Category{Name: c.Name}).Error; err != nil {

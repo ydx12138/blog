@@ -33,6 +33,7 @@ func main() {
 	}
 	// 注册路由
 	r := router.Register()
+
 	zap.L().Debug("gin运行在" + config.Cfg.SystemConfig.Address())
 	err = r.Run(config.Cfg.SystemConfig.Address())
 	if err != nil {

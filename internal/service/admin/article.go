@@ -67,13 +67,21 @@ func CreateArticle(c *gin.Context) {
 	}
 	// 从JWT获取作者ID
 	authorID, _ := c.Get("userID")
+	// 未选分类默认归入"杂谈"
+	categoryID := req.CategoryID
+	if categoryID == 0 {
+		defaultCat, err := dao.GetOrCreateDefaultCategory()
+		if err == nil {
+			categoryID = defaultCat.ID
+		}
+	}
 	article := models.Article{
 		Title:       req.Title,
 		Summary:     req.Summary,
 		Content:     req.Content,
 		ContentType: req.ContentType,
 		Cover:       req.Cover,
-		CategoryID:  req.CategoryID,
+		CategoryID:  categoryID,
 		Tags:        req.Tags,
 		Status:      req.Status,
 		AuthorID:    authorID.(uint64),

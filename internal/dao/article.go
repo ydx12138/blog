@@ -4,6 +4,7 @@ import (
 	"blog/core"
 	"blog/models"
 	"blog/models/vo"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -227,6 +228,48 @@ func GetDrafts(page int, pageSize int) ([]models.Article, int64, error) {
 		return articles, total, err
 	}
 	return articles, total, nil
+}
+
+// GetAllTags 获取所有已使用的标签（去重）
+func GetAllTags() ([]string, error) {
+	var articles []models.Article
+	err := core.DB.Select("tags").Where("status = ? AND tags != ''", 2).Find(&articles).Error
+	if err != nil {
+		zap.L().Error("GetAllTags:" + err.Error())
+		return nil, err
+	}
+	tagSet := make(map[string]struct{})
+	for _, a := range articles {
+		for _, t := range splitTags(a.Tags) {
+			tagSet[t] = struct{}{}
+		}
+	}
+	result := make([]string, 0, len(tagSet))
+	for t := range tagSet {
+		result = append(result, t)
+	}
+	return result, nil
+}
+
+func splitTags(tags string) []string {
+	parts := make([]string, 0)
+	for _, t := range strings.Split(tags, ",") {
+		t = strings.TrimSpace(t)
+		if t != "" {
+			parts = append(parts, t)
+		}
+	}
+	return parts
+}
+
+// IncrementLikeCount 文章点赞数+1
+func IncrementLikeCount(articleID uint64) error {
+	err := core.DB.Model(&models.Article{}).Where("id = ?", articleID).
+		UpdateColumn("like_count", core.DB.Raw("like_count + ?", 1)).Error
+	if err != nil {
+		zap.L().Error("IncrementLikeCount:" + err.Error())
+	}
+	return err
 }
 
 // UpdateArticleCommentCount 更新文章评论数
