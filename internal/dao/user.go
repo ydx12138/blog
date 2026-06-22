@@ -38,16 +38,23 @@ func GetUserByID(id uint64) (models.User, error) {
 	return user, nil
 }
 
-// GetUsersByPage 分页获取用户列表
-func GetUsersByPage(page int, pageSize int) ([]models.User, int64, error) {
+// GetUsersByPage 分页获取用户列表（支持搜索和筛选）
+func GetUsersByPage(page int, pageSize int, keyword string, status uint64) ([]models.User, int64, error) {
 	var users []models.User = make([]models.User, 0)
 	var total int64
-	err := core.DB.Model(&models.User{}).Count(&total).Error
+	query := core.DB.Model(&models.User{})
+	if keyword != "" {
+		query = query.Where("email like ? OR nickname like ?", "%"+keyword+"%", "%"+keyword+"%")
+	}
+	if status > 0 {
+		query = query.Where("status = ?", status)
+	}
+	err := query.Count(&total).Error
 	if err != nil {
 		zap.L().Error("GetUsersByPage count:" + err.Error())
 		return users, total, err
 	}
-	err = core.DB.Order("created_at DESC").
+	err = query.Order("created_at DESC").
 		Limit(pageSize).Offset((page - 1) * pageSize).
 		Find(&users).Error
 	if err != nil {

@@ -10,9 +10,18 @@ import (
 )
 
 // 按页码获取已发布的文章(支持自定义pageSize)
-func GetArticleByPage(page int, pageSize int) ([]vo.ArticleSimple, error) {
+func GetArticleByPage(page int, pageSize int) ([]vo.ArticleSimple, int64, error) {
 	var articleList []vo.ArticleSimple = make([]vo.ArticleSimple, 0)
-	err := core.DB.
+	var total int64
+
+	// 总数
+	err := core.DB.Model(&models.Article{}).Where("status = ?", 2).Count(&total).Error
+	if err != nil {
+		zap.L().Error("GetArticleByPage count:" + err.Error())
+		return articleList, total, err
+	}
+
+	err = core.DB.
 		Model(models.Article{}).
 		Select(`
 			article.id,
@@ -30,15 +39,16 @@ func GetArticleByPage(page int, pageSize int) ([]vo.ArticleSimple, error) {
 		`).
 		Joins("LEFT JOIN category c ON article.category_id = c.id").
 		Where("article.status = ?", 2).
+		Order("article.created_at DESC").
 		Limit(pageSize).
 		Offset((page - 1) * pageSize).
 		Scan(&articleList).Error
 
 	if err != nil {
 		zap.L().Error("GetArticleByPage()" + err.Error())
-		return articleList, err
+		return articleList, total, err
 	}
-	return articleList, nil
+	return articleList, total, nil
 }
 
 func GetArticleDetail(id uint64) (vo.ArticleDetail, error) {
@@ -268,6 +278,18 @@ func IncrementLikeCount(articleID uint64) error {
 		UpdateColumn("like_count", core.DB.Raw("like_count + ?", 1)).Error
 	if err != nil {
 		zap.L().Error("IncrementLikeCount:" + err.Error())
+	}
+	return err
+}
+
+// RecalculateAllCommentCounts 重算所有文章的评论数
+func RecalculateAllCommentCounts() error {
+	err := core.DB.Exec(`
+		UPDATE article a
+		SET comment_count = (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id AND c.status = 1)
+	`).Error
+	if err != nil {
+		zap.L().Error("RecalculateAllCommentCounts:" + err.Error())
 	}
 	return err
 }

@@ -29,13 +29,13 @@ func GetArticles(c *gin.Context) {
 	if p.PageSize < 1 {
 		p.PageSize = 10
 	}
-	articleSimpleList, err := dao.GetArticleByPage(p.Page, p.PageSize)
+	articles, total, err := dao.GetArticleByPage(p.Page, p.PageSize)
 	if err != nil {
 		zap.L().Error("GetArticleByPage()" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
-	response.SuccessWithData(articleSimpleList, c)
+	response.SuccessWithData(map[string]interface{}{"list": articles, "total": total}, c)
 }
 
 // 根据id获取文章详情

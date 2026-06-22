@@ -25,7 +25,13 @@ func GetUsers(c *gin.Context) {
 	if q.PageSize < 1 {
 		q.PageSize = 10
 	}
-	users, total, err := dao.GetUsersByPage(q.Page, q.PageSize)
+	keyword := c.Query("keyword")
+	statusStr := c.Query("status")
+	var status uint64
+	if statusStr != "" {
+		status, _ = strconv.ParseUint(statusStr, 10, 64)
+	}
+	users, total, err := dao.GetUsersByPage(q.Page, q.PageSize, keyword, status)
 	if err != nil {
 		zap.L().Error("GetUsers:" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)

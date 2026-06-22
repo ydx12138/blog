@@ -33,6 +33,7 @@ func GetCommentsByArticle(articleID uint64, page int, pageSize int) ([]vo.Commen
 		Select(`
 			comment.id,
 			comment.article_id,
+			a.title AS article_title,
 			comment.user_id,
 			u.nickname,
 			comment.content,
@@ -41,12 +42,54 @@ func GetCommentsByArticle(articleID uint64, page int, pageSize int) ([]vo.Commen
 			comment.created_at
 		`).
 		Joins("LEFT JOIN user u ON comment.user_id = u.id").
+		Joins("LEFT JOIN article a ON comment.article_id = a.id").
 		Where("comment.article_id = ? AND comment.status = ?", articleID, 1).
 		Order("comment.created_at DESC").
 		Limit(pageSize).Offset((page - 1) * pageSize).
 		Scan(&comments).Error
 	if err != nil {
 		zap.L().Error("GetCommentsByArticle:" + err.Error())
+		return comments, total, err
+	}
+	return comments, total, nil
+}
+
+// GetAllComments 获取全部评论（按时间倒序，含分页，支持搜索）
+func GetAllComments(page int, pageSize int, keyword string, searchType string) ([]vo.CommentVO, int64, error) {
+	var comments []vo.CommentVO = make([]vo.CommentVO, 0)
+	var total int64
+	query := core.DB.Model(&models.Comment{}).
+		Joins("LEFT JOIN user u ON comment.user_id = u.id").
+		Joins("LEFT JOIN article a ON comment.article_id = a.id")
+	if keyword != "" {
+		if searchType == "nickname" {
+			query = query.Where("u.nickname like ?", "%"+keyword+"%")
+		} else {
+			query = query.Where("comment.content like ?", "%"+keyword+"%")
+		}
+	}
+	err := query.Count(&total).Error
+	if err != nil {
+		zap.L().Error("GetAllComments count:" + err.Error())
+		return comments, total, err
+	}
+	err = query.
+		Select(`
+			comment.id,
+			comment.article_id,
+			a.title AS article_title,
+			comment.user_id,
+			u.nickname,
+			comment.content,
+			comment.parent_id,
+			comment.status,
+			comment.created_at
+		`).
+		Order("comment.created_at DESC").
+		Limit(pageSize).Offset((page - 1) * pageSize).
+		Scan(&comments).Error
+	if err != nil {
+		zap.L().Error("GetAllComments:" + err.Error())
 		return comments, total, err
 	}
 	return comments, total, nil
@@ -67,6 +110,7 @@ func GetPendingComments(page int, pageSize int) ([]vo.CommentVO, int64, error) {
 		Select(`
 			comment.id,
 			comment.article_id,
+			a.title AS article_title,
 			comment.user_id,
 			u.nickname,
 			comment.content,
@@ -75,6 +119,7 @@ func GetPendingComments(page int, pageSize int) ([]vo.CommentVO, int64, error) {
 			comment.created_at
 		`).
 		Joins("LEFT JOIN user u ON comment.user_id = u.id").
+		Joins("LEFT JOIN article a ON comment.article_id = a.id").
 		Where("comment.status = ?", 3).
 		Order("comment.created_at DESC").
 		Limit(pageSize).Offset((page - 1) * pageSize).
@@ -95,6 +140,17 @@ func UpdateCommentStatus(id uint64, status int8) error {
 		return err
 	}
 	return nil
+}
+
+// GetCommentByID 获取单条评论
+func GetCommentByID(id uint64) (models.Comment, error) {
+	var c models.Comment
+	err := core.DB.First(&c, id).Error
+	if err != nil {
+		zap.L().Error("GetCommentByID:" + err.Error())
+		return c, err
+	}
+	return c, nil
 }
 
 // DeleteComment 删除评论
