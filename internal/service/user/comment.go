@@ -44,9 +44,10 @@ func CreateComment(c *gin.Context) {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
-	// 从JWT获取userID
+	// 先前JWTAuth中间件传下来的userID，从JWT获取userID
 	userID, exists := c.Get("userID")
 	if !exists {
+		zap.L().Error("CreateComment: 获取userID失败")
 		response.ErrWithMsg(code.Unauthorized, c)
 		return
 	}

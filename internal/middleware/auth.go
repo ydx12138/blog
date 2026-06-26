@@ -31,3 +31,36 @@ func JWTAuth() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// 验证token中间件
+func JWTAuthForAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenStr := c.GetHeader("Authorization")
+
+		if tokenStr == "" {
+			c.AbortWithStatusJSON(401, gin.H{
+				"msg": "未登录",
+			})
+			return
+		}
+		//解析token
+		claims, err := utils.ParseToken(tokenStr)
+		if err != nil {
+			c.AbortWithStatusJSON(401, gin.H{
+				"msg": "Token无效",
+			})
+			return
+		}
+		//用户的token不能访问管理员接口
+		if claims.Role != "admin" {
+			c.AbortWithStatusJSON(401, gin.H{
+				"msg": "Token无效",
+			})
+			return
+		}
+		// 把userID和role传下去
+		c.Set("userID", claims.UserID)
+		c.Set("role", claims.Role)
+		c.Next()
+	}
+}

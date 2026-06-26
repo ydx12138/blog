@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// 按页码获取已发布的文章(支持自定义pageSize)
+// 按页码获取已发布的文章(支持自定义pageSize),返回值：当前页的文章列表、当前已发布的文章总数、err
 func GetArticleByPage(page int, pageSize int) ([]vo.ArticleSimple, int64, error) {
 	var articleList []vo.ArticleSimple = make([]vo.ArticleSimple, 0)
 	var total int64
@@ -51,6 +51,7 @@ func GetArticleByPage(page int, pageSize int) ([]vo.ArticleSimple, int64, error)
 	return articleList, total, nil
 }
 
+// 根据文章id获取文章详情
 func GetArticleDetail(id uint64) (vo.ArticleDetail, error) {
 	var detail vo.ArticleDetail
 	err := core.DB.
@@ -300,6 +301,7 @@ func UpdateArticleCommentCount(articleID uint64, delta int) error {
 		UpdateColumn("comment_count", core.DB.Raw("comment_count + ?", delta)).Error
 	if err != nil {
 		zap.L().Error("UpdateArticleCommentCount:" + err.Error())
+		return err
 	}
 	return err
 }

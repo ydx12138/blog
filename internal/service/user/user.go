@@ -18,17 +18,22 @@ import (
 
 // 首页返回按页码返回文章列表
 func GetArticles(c *gin.Context) {
+	//参数接收和校验处理
 	var p dto.PageQueryWithSize
 	err := c.ShouldBindQuery(&p)
 	if err != nil {
+		zap.L().Error("GetArticles参数page出错，已采用默认参数page=1:" + err.Error())
 		p.Page = 1
 	}
 	if p.Page < 1 {
+		zap.L().Error("GetArticles参数page出错，已采用默认参数page=1")
 		p.Page = 1
 	}
 	if p.PageSize < 1 {
+		zap.L().Error("GetArticles参数PageSize出错，已采用默认参数PageSize=10")
 		p.PageSize = 10
 	}
+	//db
 	articles, total, err := dao.GetArticleByPage(p.Page, p.PageSize)
 	if err != nil {
 		zap.L().Error("GetArticleByPage()" + err.Error())
@@ -40,6 +45,7 @@ func GetArticles(c *gin.Context) {
 
 // 根据id获取文章详情
 func GetArticle(c *gin.Context) {
+	//接收、校验参数
 	var detail vo.ArticleDetail
 	err := c.ShouldBindQuery(&detail)
 	if err != nil {
@@ -47,6 +53,7 @@ func GetArticle(c *gin.Context) {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
+	//db
 	articleDetail, err := dao.GetArticleDetail(detail.ID)
 	if err != nil {
 		zap.L().Error("GetArticle:" + err.Error())
@@ -85,20 +92,20 @@ func Register(c *gin.Context) {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
-	fmt.Println("1", user)
 	// 判断邮箱是否已注册
 	existUser, err := dao.GetUserByEmail(user.Email)
+	//db出错，ErrRecordNotFound除外
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		zap.L().Error("Register 查询用户失败:" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
+	//
 	if existUser.ID != 0 {
 		zap.L().Error("邮箱已经存在")
 		response.ErrWithMsg(code.ErrUserExist, c)
 		return
 	}
-	fmt.Println("2", user)
 	// 加密
 	hashPassword, err := utils.HashPassword(user.Password)
 	if err != nil {
@@ -106,7 +113,6 @@ func Register(c *gin.Context) {
 		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
-	fmt.Println("3", user)
 	// 存入数据库
 	newUser := models.User{
 		Email:    user.Email,

@@ -10,8 +10,10 @@ import (
 // 根据邮箱查询用户是否存在
 func GetUserByEmail(email string) (models.User, error) {
 	var user models.User
+	//first如果没有查到，会err=gorm.ErrRecordNotFound
 	err := core.DB.Where("email = ?", email).First(&user).Error
 	if err != nil {
+		zap.L().Error("GetUserByEmail：" + err.Error())
 		return user, err
 	}
 	return user, nil
