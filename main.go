@@ -13,6 +13,8 @@ import (
 func main() {
 	// 参数
 	flags.Parse()
+	//OSS
+	//utils.UploadToOss()
 	// 加载配置文件
 	err := config.LoadConfig()
 	if err != nil {

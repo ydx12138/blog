@@ -33,7 +33,7 @@ type MysqlConfig struct {
 }
 
 func (m MysqlConfig) DSN() string {
-	return m.User + ":" + m.Password + "@tcp(" + m.Host + ":" + strconv.Itoa(m.Port) + ")/" + m.Db + "?charset=utf8&parseTime=true"
+	return m.User + ":" + m.Password + "@tcp(" + m.Host + ":" + strconv.Itoa(m.Port) + ")/" + m.Db + "?charset=utf8mb4&parseTime=true"
 
 }
 
