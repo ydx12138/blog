@@ -44,6 +44,7 @@ func GetArticle(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
+		zap.L().Error("Admin GetArticle:" + err.Error())
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
@@ -86,6 +87,7 @@ func CreateArticle(c *gin.Context) {
 		Status:      req.Status,
 		AuthorID:    authorID.(uint64),
 	}
+	//如果状态是发布，直接就把发布时间设置为当前时间
 	if req.Status == 2 {
 		now := time.Now()
 		article.PublishTime = &now

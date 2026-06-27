@@ -61,8 +61,10 @@ func Register() *gin.Engine {
 		adminGroup.POST("/login", admin.Login)
 		adminAuth := adminGroup.Group("")
 		adminAuth.Use(middleware.JWTAuthForAdmin())
+		//数据看板
 		adminAuth.GET("/dashboard", admin.GetDashboard)
 		adminAuth.GET("/articles", admin.GetArticles)
+		//根据id获取文章详情
 		adminAuth.GET("/articles/:id", admin.GetArticle)
 		//创建文章
 		adminAuth.POST("/articles", admin.CreateArticle)
