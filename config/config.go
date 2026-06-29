@@ -21,6 +21,7 @@ type Config struct {
 	SystemConfig SystemConfig `mapstructure:"system"`
 	LogConfig    LogConfig    `mapstructure:"log"`
 	MysqlConfig  MysqlConfig  `mapstructure:"mysql"`
+	OssConfig    OssConfig    `mapstructure:"oss"`
 }
 
 type MysqlConfig struct {
@@ -51,6 +52,13 @@ type LogConfig struct {
 	App   string `mapstructure:"app"`
 	Dir   string `mapstructure:"dir"`
 	Level string `mapstructure:"level"`
+}
+type OssConfig struct {
+	AccessKeyId     string `mapstructure:"access_key_id"`
+	AccessKeySecret string `mapstructure:"access_key_secret"`
+	Endpoint        string `mapstructure:"endpoint"`
+	Bucket          string `mapstructure:"bucket"`
+	Image_path      string `mapstructure:"image_path"`
 }
 
 /*type ServerConfig struct {
