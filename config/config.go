@@ -22,6 +22,15 @@ type Config struct {
 	LogConfig    LogConfig    `mapstructure:"log"`
 	MysqlConfig  MysqlConfig  `mapstructure:"mysql"`
 	OssConfig    OssConfig    `mapstructure:"oss"`
+	MailConfig   MailConfig   `mapstructure:"mail"`
+}
+type MailConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	FromName string `mapstructure:"from_name"`
+	SSL      bool   `mapstructure:"ssl"`
 }
 
 type MysqlConfig struct {
