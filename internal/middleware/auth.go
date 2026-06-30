@@ -2,65 +2,57 @@ package middleware
 
 import (
 	"blog/internal/utils"
+	"blog/pkg/code"
+	"blog/pkg/response"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-// 验证token中间件
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenStr := c.GetHeader("Authorization")
-
-		if tokenStr == "" {
-			c.AbortWithStatusJSON(401, gin.H{
-				"msg": "未登录",
-			})
+		claims, ok := parseClaims(c)
+		if !ok {
 			return
 		}
-		//解析token
-		claims, err := utils.ParseToken(tokenStr)
-		if err != nil {
-			c.AbortWithStatusJSON(401, gin.H{
-				"msg": "Token无效",
-			})
-			return
-		}
-		// 把userID和role传下去
 		c.Set("userID", claims.UserID)
 		c.Set("role", claims.Role)
 		c.Next()
 	}
 }
 
-// 验证token中间件
 func JWTAuthForAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenStr := c.GetHeader("Authorization")
-
-		if tokenStr == "" {
-			c.AbortWithStatusJSON(401, gin.H{
-				"msg": "未登录",
-			})
+		claims, ok := parseClaims(c)
+		if !ok {
 			return
 		}
-		//解析token
-		claims, err := utils.ParseToken(tokenStr)
-		if err != nil {
-			c.AbortWithStatusJSON(401, gin.H{
-				"msg": "Token无效",
-			})
-			return
-		}
-		//用户的token不能访问管理员接口
 		if claims.Role != "admin" {
-			c.AbortWithStatusJSON(401, gin.H{
-				"msg": "Token无效",
-			})
+			response.ErrWithMsg(code.Forbidden, c)
+			c.Abort()
 			return
 		}
-		// 把userID和role传下去
 		c.Set("userID", claims.UserID)
 		c.Set("role", claims.Role)
 		c.Next()
 	}
+}
+
+func parseClaims(c *gin.Context) (*utils.CustomClaims, bool) {
+	tokenStr := strings.TrimSpace(c.GetHeader("Authorization"))
+	if tokenStr == "" {
+		response.ErrWithMsg(code.Unauthorized, c)
+		c.Abort()
+		return nil, false
+	}
+	if strings.HasPrefix(strings.ToLower(tokenStr), "bearer ") {
+		tokenStr = strings.TrimSpace(tokenStr[7:])
+	}
+	claims, err := utils.ParseToken(tokenStr)
+	if err != nil {
+		response.ErrWithMsg(code.Unauthorized, c)
+		c.Abort()
+		return nil, false
+	}
+	return claims, true
 }

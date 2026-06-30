@@ -21,8 +21,17 @@ type Config struct {
 	SystemConfig SystemConfig `mapstructure:"system"`
 	LogConfig    LogConfig    `mapstructure:"log"`
 	MysqlConfig  MysqlConfig  `mapstructure:"mysql"`
+	Redis        RedisConfig  `mapstructure:"redis"`
 	OssConfig    OssConfig    `mapstructure:"oss"`
 	MailConfig   MailConfig   `mapstructure:"mail"`
+}
+
+type RedisConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
+	PoolSize int    `mapstructure:"pool_size"`
 }
 type MailConfig struct {
 	Host     string `mapstructure:"host"`
@@ -83,7 +92,7 @@ type CORSConfig struct {
 }
 
 // LoadConfig 加载配置文件
-func LoadConfig() error {
+/*func LoadConfig() error {
 	viper.SetConfigFile(flags.FlagOptions.File)
 	viper.SetConfigType("yaml")
 	if err := viper.ReadInConfig(); err != nil {
@@ -94,4 +103,18 @@ func LoadConfig() error {
 	}
 	zap.L().Info("读取配置文件" + flags.FlagOptions.File + "成功")
 	return nil
+}*/
+func LoadConfig() (*Config, error) {
+	cfg := &Config{}
+	viper.SetConfigFile(flags.FlagOptions.File)
+	viper.SetConfigType("yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		return cfg, err
+	}
+	if err := viper.Unmarshal(cfg); err != nil {
+		return cfg, err
+	}
+	zap.L().Info("读取配置文件" + flags.FlagOptions.File + "成功")
+	Cfg = cfg
+	return cfg, nil
 }

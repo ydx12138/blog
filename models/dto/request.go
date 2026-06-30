@@ -51,7 +51,7 @@ type CreateArticleReq struct {
 }
 
 type UpdateArticleReq struct {
-	ID          uint64 `json:"id" binding:"required"`
+	ID          uint64 `json:"id"`
 	Title       string `json:"title" binding:"required"`
 	Summary     string `json:"summary"`
 	Content     string `json:"content"`

@@ -48,7 +48,7 @@ func (e *logEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*
 			}
 		}
 		//检查目录
-		err = os.MkdirAll(fmt.Sprintf(config.Cfg.LogConfig.Dir+"/%s", now), 0666)
+		err = os.MkdirAll(fmt.Sprintf(config.Cfg.LogConfig.Dir+"/%s", now), 0755)
 		if err != nil {
 			return nil, err
 		}

@@ -10,14 +10,10 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// 结构体字段名需要大写
+// DB is kept for legacy code paths such as seed scripts. New runtime code should use dependency injection.
 var DB *gorm.DB
 
-func DataBaseInit() {
-	//数据库
-	//DSN := "root:123456@tcp(127.0.0.1:3306)/gorm_db_new?charset=utf8&parseTime=true"
-	//DSN := config.Cfg.MysqlConfig.User + ":" + config.Cfg.MysqlConfig.Password + "@tcp(" + config.Cfg.MysqlConfig.Host + ":" + strconv.Itoa(config.Cfg.MysqlConfig.Port) + ")/" + config.Cfg.MysqlConfig.Db + "?charset=utf8&parseTime=true"
-	var err error
+func DataBaseInit() (*gorm.DB, error) {
 	var level logger.LogLevel = logger.Info
 	switch config.Cfg.MysqlConfig.Log_level {
 	case "info":
@@ -29,15 +25,18 @@ func DataBaseInit() {
 	case "silent":
 		level = logger.Silent
 	}
-	DB, err = gorm.Open(mysql.Open(config.Cfg.MysqlConfig.DSN()), &gorm.Config{
+
+	db, err := gorm.Open(mysql.Open(config.Cfg.MysqlConfig.DSN()), &gorm.Config{
 		Logger:                                   logger.Default.LogMode(level),
-		DisableForeignKeyConstraintWhenMigrating: true, //不创建外键约束
+		DisableForeignKeyConstraintWhenMigrating: true,
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
 		},
 	})
 	if err != nil {
-		zap.L().Error("数据库连接失败" + err.Error())
-		return
+		zap.L().Error("database connection failed: " + err.Error())
+		return nil, err
 	}
+	DB = db
+	return db, nil
 }

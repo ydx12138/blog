@@ -2,7 +2,6 @@ package seed
 
 import (
 	"blog/core"
-	"blog/internal/dao"
 	"blog/internal/utils"
 	"blog/models"
 	"time"
@@ -127,7 +126,7 @@ func Run() {
 	}
 
 	// 重算所有文章评论数
-	if err := dao.RecalculateAllCommentCounts(); err != nil {
+	if err := core.DB.Exec("UPDATE article a SET comment_count = (SELECT COUNT(*) FROM comment c WHERE c.article_id = a.id AND c.status = 1)").Error; err != nil {
 		zap.L().Error("重算评论数失败: " + err.Error())
 	}
 

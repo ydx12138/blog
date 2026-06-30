@@ -1,90 +1,62 @@
 package router
 
 import (
+	"blog/internal/handler"
 	"blog/internal/middleware"
-	"blog/internal/service/admin"
-	"blog/internal/service/user"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Register 注册所有路由
-func Register() *gin.Engine {
+func Register(h *handler.Handler) *gin.Engine {
 	r := gin.Default()
 	r.Use(middleware.CorsMiddleware())
 
-	// 静态文件存放路径 - 上传图片
 	r.Static("/uploads", "./uploads")
 
-	// ========== 公开API ==========
 	api := r.Group("/api")
 	{
 		public := api.Group("")
-
-		// 文章列表
-		public.GET("/articles", user.GetArticles)
-		//文章详情
-		public.GET("/articles/detail", user.GetArticle)
-		//搜索文章
-		public.GET("/articles/search", user.SearchArticle)
-
-		// 分类
-		public.GET("/categories", user.GetCategories)
-		// xx分类的文章
-		public.GET("/categories/articles", user.GetCategoryArticles)
-
-		// 评论（公开）
-		public.GET("/comments", user.GetComments)
-
-		// 用户认证（公开）
-		//注册
-		public.POST("/register", user.Register)
-		//登录
-		public.POST("/login", user.Login)
-		//点赞·
-		public.POST("/articles/like", user.LikeArticle)
-		//标签
-		public.GET("/tags", user.GetTags)
+		public.GET("/articles", h.User.GetArticles)
+		public.GET("/articles/detail", h.User.GetArticle)
+		public.GET("/articles/search", h.User.SearchArticle)
+		public.GET("/categories", h.User.GetCategories)
+		public.GET("/categories/articles", h.User.GetCategoryArticles)
+		public.GET("/comments", h.User.GetComments)
+		public.POST("/register", h.User.Register)
+		public.POST("/login", h.User.Login)
+		public.POST("/articles/like", h.User.LikeArticle)
+		public.GET("/tags", h.User.GetTags)
 	}
 	{
-		// 用户认证路由（需JWT）
 		apiAuth := api.Group("")
 		apiAuth.Use(middleware.JWTAuth())
-		//增加评论，更新文章评论数
-		apiAuth.POST("/comments", user.CreateComment)
+		apiAuth.POST("/comments", h.User.CreateComment)
 	}
 
-	{
-		// ========== 管理员API ==========
-		adminGroup := r.Group("/api/admin")
-		//管理员登录
-		adminGroup.POST("/login", admin.Login)
-		adminAuth := adminGroup.Group("")
-		adminAuth.Use(middleware.JWTAuthForAdmin())
-		//数据看板
-		adminAuth.GET("/dashboard", admin.GetDashboard)
-		adminAuth.GET("/articles", admin.GetArticles)
-		//根据id获取文章详情
-		adminAuth.GET("/articles/:id", admin.GetArticle)
-		//创建文章
-		adminAuth.POST("/articles", admin.CreateArticle)
-		adminAuth.PUT("/articles/:id", admin.UpdateArticle)
-		adminAuth.DELETE("/articles/:id", admin.DeleteArticle)
-		adminAuth.GET("/drafts", admin.GetDrafts)
-		adminAuth.PUT("/articles/:id/publish", admin.PublishArticle)
-		adminAuth.POST("/upload", admin.UploadImage)
-		// 评论管理
-		adminAuth.GET("/comments", admin.GetAllComments)
-		adminAuth.GET("/comments/pending", admin.GetPendingComments)
-		adminAuth.PUT("/comments/:id/approve", admin.ApproveComment)
-		adminAuth.PUT("/comments/:id/reject", admin.RejectComment)
-		adminAuth.DELETE("/comments/:id", admin.DeleteComment)
-		adminAuth.PUT("/comments/:id/status", admin.SetCommentStatus)
-		// 用户管理
-		adminAuth.GET("/users", admin.GetUsers)
-		adminAuth.PUT("/users/:id/ban", admin.BanUser)
-		adminAuth.PUT("/users/:id/unban", admin.UnbanUser)
-		adminAuth.DELETE("/users/:id", admin.DeleteUser)
-	}
+	adminGroup := r.Group("/api/admin")
+	adminGroup.POST("/login", h.Admin.Login)
+
+	adminAuth := adminGroup.Group("")
+	adminAuth.Use(middleware.JWTAuthForAdmin())
+	adminAuth.GET("/dashboard", h.Admin.GetDashboard)
+	adminAuth.GET("/articles", h.Admin.GetArticles)
+	adminAuth.GET("/articles/:id", h.Admin.GetArticle)
+	adminAuth.POST("/articles", h.Admin.CreateArticle)
+	adminAuth.PUT("/articles/:id", h.Admin.UpdateArticle)
+	adminAuth.DELETE("/articles/:id", h.Admin.DeleteArticle)
+	adminAuth.GET("/drafts", h.Admin.GetDrafts)
+	adminAuth.PUT("/articles/:id/publish", h.Admin.PublishArticle)
+	adminAuth.POST("/upload", h.Admin.UploadImage)
+	adminAuth.GET("/comments", h.Admin.GetAllComments)
+	adminAuth.GET("/comments/pending", h.Admin.GetPendingComments)
+	adminAuth.PUT("/comments/:id/approve", h.Admin.ApproveComment)
+	adminAuth.PUT("/comments/:id/reject", h.Admin.RejectComment)
+	adminAuth.DELETE("/comments/:id", h.Admin.DeleteComment)
+	adminAuth.PUT("/comments/:id/status", h.Admin.SetCommentStatus)
+	adminAuth.GET("/users", h.Admin.GetUsers)
+	adminAuth.PUT("/users/:id/ban", h.Admin.BanUser)
+	adminAuth.PUT("/users/:id/unban", h.Admin.UnbanUser)
+	adminAuth.DELETE("/users/:id", h.Admin.DeleteUser)
+
 	return r
 }
