@@ -10,7 +10,6 @@ import (
 func Register(h *handler.Handler) *gin.Engine {
 	r := gin.Default()
 	r.Use(middleware.CorsMiddleware())
-
 	r.Static("/uploads", "./uploads")
 
 	api := r.Group("/api")
@@ -22,6 +21,7 @@ func Register(h *handler.Handler) *gin.Engine {
 		public.GET("/categories", h.User.GetCategories)
 		public.GET("/categories/articles", h.User.GetCategoryArticles)
 		public.GET("/comments", h.User.GetComments)
+		public.POST("/register/code", h.User.SendRegisterCode)
 		public.POST("/register", h.User.Register)
 		public.POST("/login", h.User.Login)
 		public.POST("/articles/like", h.User.LikeArticle)

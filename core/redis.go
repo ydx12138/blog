@@ -4,15 +4,15 @@ import (
 	"blog/config"
 	"context"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
-var RDB *redis.Client
-
-func InitRedis() error {
+func InitRedis() (*redis.Client, error) {
+	var rdb *redis.Client
 	redis1 := config.Cfg.Redis
-	RDB = redis.NewClient(&redis.Options{
+	rdb = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", redis1.Host, redis1.Port),
 		Password: redis1.Password,
 		DB:       redis1.DB,
@@ -26,11 +26,11 @@ func InitRedis() error {
 	defer cancel()
 
 	// 测试连接
-	_, err := RDB.Ping(ctx).Result()
+	_, err := rdb.Ping(ctx).Result()
 	if err != nil {
-		return fmt.Errorf("redis connect failed: %w", err)
+		return nil, fmt.Errorf("redis connect failed: %w", err)
 	}
 
 	fmt.Println("Redis connected successfully")
-	return nil
+	return rdb, nil
 }

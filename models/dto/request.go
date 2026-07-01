@@ -26,6 +26,11 @@ type UserRegister struct {
 	Password   string `form:"password" json:"password" binding:"required,min=6,max=10"`
 	Repassword string `form:"re_password" json:"re_password" binding:"required,min=6,max=10,eqfield=Password"`
 	Nickname   string `form:"nickname" json:"nickname"`
+	Code       string `form:"code" json:"code" binding:"required,len=6"`
+}
+
+type SendRegisterCodeReq struct {
+	Email string `form:"email" json:"email" binding:"required,email"`
 }
 
 type UserLogin struct {

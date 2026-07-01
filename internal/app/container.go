@@ -23,7 +23,7 @@ type Container struct {
 
 func NewContainer(cfg Config, db *gorm.DB, redis *redis.Client) *Container {
 	repo := repository.New(db)
-	svc := service.New(repo)
+	svc := service.New(repo, redis)
 	h := handler.New(svc)
 	return &Container{
 		Config:     cfg,
