@@ -6,6 +6,14 @@ type ErrorCode struct {
 	Message  string
 }
 
+func ErrorMsg(err error) ErrorCode {
+	return ErrorCode{
+		HttpCode: 200,
+		BizCode:  0,
+		Message:  err.Error(),
+	}
+}
+
 var (
 	Success       = ErrorCode{200, 0, "success"}
 	BadRequest    = ErrorCode{200, 1001, "参数错误"}

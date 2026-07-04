@@ -111,6 +111,6 @@ type ArticleLikeReq struct {
 type UserUpdatePassword struct {
 	Email      string `form:"email" json:"email" binding:"required,email"`
 	Password   string `form:"password" json:"password" binding:"required,min=6,max=10"`
-	RePassword string `form:"re_password" json:"re_password" binding:"required,len=6,min=6,max=10,eqfield=Password"`
+	RePassword string `form:"re_password" json:"re_password" binding:"required,min=6,max=10,eqfield=Password"`
 	Code       string `form:"code" json:"code" binding:"required,len=6"`
 }

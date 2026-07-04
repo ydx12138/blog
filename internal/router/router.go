@@ -27,6 +27,7 @@ func Register(h *handler.Handler) *gin.Engine {
 		public.POST("/articles/like", h.User.LikeArticle)
 		public.GET("/tags", h.User.GetTags)
 		public.POST("/sendpwdcode", h.User.SendCodeForgetPwd)
+		public.POST("/updatePasswordByCode", h.User.UpdatePasswordByCode)
 	}
 	{
 		apiAuth := api.Group("")

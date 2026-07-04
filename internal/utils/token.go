@@ -21,10 +21,10 @@ func GenerateToken(userID uint64, role string) (string, error) {
 		UserID: userID,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)), // 7天过期
-			IssuedAt:  jwt.NewNumericDate(time.Now()),                         //签发时间
-			NotBefore: jwt.NewNumericDate(time.Now()),                         //生效时间
-			Issuer:    "blog",                                                 //发行者
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Second)), // 7天过期
+			IssuedAt:  jwt.NewNumericDate(time.Now()),                       //签发时间
+			NotBefore: jwt.NewNumericDate(time.Now()),                       //生效时间
+			Issuer:    "blog",                                               //发行者
 		},
 	}
 	//token格式 ==> header.payload.signature
