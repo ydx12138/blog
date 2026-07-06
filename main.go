@@ -6,6 +6,7 @@ import (
 	"blog/flags"
 	"blog/internal/app"
 	"blog/internal/router"
+	"blog/internal/utils"
 	"blog/seed"
 
 	"go.uber.org/zap"
@@ -29,7 +30,7 @@ func main() {
 	}
 	//迁移
 	core.InitModel(db)
-
+	//插入初始数据
 	if flags.FlagOptions.Seed {
 		seed.Run()
 		zap.L().Info("seed data completed")
@@ -39,6 +40,13 @@ func main() {
 	initRedis, err := core.InitRedis()
 	if err != nil {
 		zap.L().Error("redis init failed: " + err.Error())
+		return
+	}
+
+	//加载敏感词文件
+	err = utils.InitSensitive("./blog/high.txt")
+	if err != nil {
+		zap.L().Error("sensitive init failed: " + err.Error())
 		return
 	}
 	//加载依赖

@@ -114,3 +114,9 @@ type UserUpdatePassword struct {
 	RePassword string `form:"re_password" json:"re_password" binding:"required,min=6,max=10,eqfield=Password"`
 	Code       string `form:"code" json:"code" binding:"required,len=6"`
 }
+
+type UserPutPhone struct {
+	Email            string `form:"email" json:"email" binding:"required,email"`
+	Phone            string `form:"phone" json:"phone" binding:"required"`
+	VerificationCode string `form:"verification_code" json:"verification_code" binding:"required"`
+}

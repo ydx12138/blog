@@ -33,6 +33,7 @@ func Register(h *handler.Handler) *gin.Engine {
 		apiAuth := api.Group("")
 		apiAuth.Use(middleware.JWTAuth())
 		apiAuth.POST("/comments", h.User.CreateComment)
+		apiAuth.POST("/updatephonenumber", h.User.UpdatePhoneNumber)
 	}
 
 	adminGroup := r.Group("/api/admin")

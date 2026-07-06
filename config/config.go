@@ -24,6 +24,7 @@ type Config struct {
 	Redis        RedisConfig  `mapstructure:"redis"`
 	OssConfig    OssConfig    `mapstructure:"oss"`
 	MailConfig   MailConfig   `mapstructure:"mail"`
+	Sms          SmsConfig    `mapstructure:"sms"`
 }
 
 type RedisConfig struct {
@@ -89,6 +90,24 @@ type CORSConfig struct {
 	AllowHeaders     []string      `mapstructure:"allow_headers"`
 	AllowCredentials bool          `mapstructure:"allow_credentials"`
 	MaxAge           time.Duration `mapstructure:"max_age"`
+}
+
+type SmsConfig struct {
+	SchemeName       string `mapstructure:"scheme_name"`        //方案名称
+	CountryCode      string `mapstructure:"country_code"`       //号码国家编码
+	SignName         string `mapstructure:"sign_name"`          //签名名称
+	TemplateCode     string `mapstructure:"template_code"`      //短信模板CODE
+	TemplateParam    string `mapstructure:"template_param"`     //短信模板
+	CodeLength       int64  `mapstructure:"code_length"`        //验证码长度
+	ValidTime        int64  `mapstructure:"valid_time"`         //验证码有效时间
+	DuplicatePolicy  int64  `mapstructure:"duplicate_policy"`   //核验规则
+	Interval         int64  `mapstructure:"interval"`           //时间间隔
+	CodeType         int64  `mapstructure:"code_type"`          //生成的验证码类型
+	ReturnVerifyCode bool   `mapstructure:"return_verify_code"` //是否返回验证码
+	AutoRetry        int64  `mapstructure:"auto_retry"`         //是否自动替换签名重试
+	AccessKeyId      string `mapstructure:"access_key_id"`
+	AccessKeySecret  string `mapstructure:"access_key_secret"`
+	CaseAuthPolicy   int64  `mapstructure:"case_auth_policy"`
 }
 
 // LoadConfig 加载配置文件
