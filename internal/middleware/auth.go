@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 用户token
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims, ok := parseClaims(c)
@@ -21,6 +22,7 @@ func JWTAuth() gin.HandlerFunc {
 	}
 }
 
+// 管理员token
 func JWTAuthForAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims, ok := parseClaims(c)
@@ -32,6 +34,7 @@ func JWTAuthForAdmin() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
 		c.Set("userID", claims.UserID)
 		c.Set("role", claims.Role)
 		c.Next()
@@ -68,3 +71,24 @@ func parseClaims(c *gin.Context) (*utils.CustomClaims, bool) {
 	// 解析成功，返回 claims
 	return claims, true
 }
+
+// 刷新或进入标签页的时候，如果有token，就请求，验证这个token是否还能用
+func VerificationToken() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		//获取token
+		tokenStr := strings.TrimSpace(c.GetHeader("Authorization"))
+		//如果有bearer 前缀，则切割一下
+		if strings.HasPrefix(strings.ToLower(tokenStr), "bearer ") {
+			tokenStr = strings.TrimSpace(tokenStr[7:])
+		}
+		//token为空,请先登录，但是前端如果没有token，就不会发这个请求，所以这一步应该用不到
+		if tokenStr == "" {
+			response.ErrWithMsg(code.Unauthorized, c)
+			return
+		}
+		//
+
+	}
+}
+
+//双token

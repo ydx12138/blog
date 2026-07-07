@@ -44,11 +44,8 @@ func main() {
 	}
 
 	//加载敏感词文件
-	err = utils.InitSensitive("./blog/high.txt")
-	if err != nil {
-		zap.L().Error("sensitive init failed: " + err.Error())
-		return
-	}
+	utils.InitSensitive("./high.txt")
+
 	//加载依赖
 	container := app.NewContainer(cfg, db, initRedis)
 	//加载路由

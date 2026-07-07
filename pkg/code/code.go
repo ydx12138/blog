@@ -21,6 +21,7 @@ var (
 	Forbidden     = ErrorCode{200, 1003, "无权限"}
 	NotFound      = ErrorCode{200, 1004, "资源不存在"}
 	InternalError = ErrorCode{200, 1005, "服务器内部错误"}
+	TokenExpired  = ErrorCode{200, 1006, "token过期"}
 )
 
 var (
