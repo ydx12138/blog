@@ -28,6 +28,7 @@ func InitRedis() (*redis.Client, error) {
 	// 测试连接
 	_, err := rdb.Ping(ctx).Result()
 	if err != nil {
+		_ = rdb.Close()
 		return nil, fmt.Errorf("redis connect failed: %w", err)
 	}
 

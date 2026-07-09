@@ -1,11 +1,6 @@
 package core
 
-import (
-	"log"
-	"os"
-)
-
-func Getfile(path string) *os.File {
+/*func Getfile(path string) *os.File {
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Print(err)
@@ -13,3 +8,4 @@ func Getfile(path string) *os.File {
 	}
 	return file
 }
+*/

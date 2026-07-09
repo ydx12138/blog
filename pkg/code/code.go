@@ -1,5 +1,7 @@
 package code
 
+import "errors"
+
 type ErrorCode struct {
 	HttpCode int
 	BizCode  int
@@ -15,13 +17,14 @@ func ErrorMsg(err error) ErrorCode {
 }
 
 var (
-	Success       = ErrorCode{200, 0, "success"}
-	BadRequest    = ErrorCode{200, 1001, "参数错误"}
-	Unauthorized  = ErrorCode{200, 1002, "请先登录"}
-	Forbidden     = ErrorCode{200, 1003, "无权限"}
-	NotFound      = ErrorCode{200, 1004, "资源不存在"}
-	InternalError = ErrorCode{200, 1005, "服务器内部错误"}
-	TokenExpired  = ErrorCode{200, 1006, "token过期"}
+	Success             = ErrorCode{200, 0, "success"}
+	BadRequest          = ErrorCode{200, 1001, "参数错误"}
+	Unauthorized        = ErrorCode{200, 1002, "请先登录"}
+	Forbidden           = ErrorCode{200, 1003, "无权限"}
+	NotFound            = ErrorCode{200, 1004, "资源不存在"}
+	InternalError       = ErrorCode{200, 1005, "服务器内部错误"}
+	AccessTokenExpired  = ErrorCode{200, 1006, "access_token过期"}
+	RefreshTokenExpired = ErrorCode{200, 1007, "refresh_token过期"}
 )
 
 var (
@@ -47,4 +50,8 @@ var (
 
 var (
 	ErrNoPermission = ErrorCode{200, 6001, "无操作权限"}
+)
+
+var (
+	ErrNotHaveToken = errors.New("token为空")
 )

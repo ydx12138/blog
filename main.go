@@ -43,13 +43,13 @@ func main() {
 		return
 	}
 
-	//加载敏感词文件
+	//加载敏感词
 	utils.InitSensitive("./high.txt")
 
 	//加载依赖
 	container := app.NewContainer(cfg, db, initRedis)
 	//加载路由
-	r := router.Register(container.Handler)
+	r := router.Register(container)
 
 	zap.L().Debug("gin running at " + config.Cfg.SystemConfig.Address())
 	//启动项目

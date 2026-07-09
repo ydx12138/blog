@@ -1,13 +1,14 @@
 package router
 
 import (
-	"blog/internal/handler"
+	"blog/internal/app"
 	"blog/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Register(h *handler.Handler) *gin.Engine {
+func Register(container *app.Container) *gin.Engine {
+	h := container.Handler
 	r := gin.Default()
 	r.Use(middleware.CorsMiddleware())
 	r.Static("/uploads", "./uploads")
@@ -29,6 +30,8 @@ func Register(h *handler.Handler) *gin.Engine {
 		public.POST("/sendpwdcode", h.User.SendCodeForgetPwd)
 		public.POST("/updatePasswordByCode", h.User.UpdatePasswordByCode)
 		public.POST("/users/me", h.User.UsersMe)
+		//refreshToken刷新
+		public.POST("/token/refresh", h.User.TokenRefresh)
 	}
 	{
 		apiAuth := api.Group("")

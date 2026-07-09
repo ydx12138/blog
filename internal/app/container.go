@@ -3,6 +3,7 @@ package app
 import (
 	"blog/config"
 	"blog/internal/handler"
+	"blog/internal/redismethod"
 	"blog/internal/repository"
 	"blog/internal/service"
 
@@ -19,12 +20,16 @@ type Container struct {
 	Repository *repository.Repository
 	Service    *service.Service
 	Handler    *handler.Handler
+	RedisStore *redismethod.RedisMethod
 }
 
 func NewContainer(cfg Config, db *gorm.DB, redis *redis.Client) *Container {
+	//三层架构
 	repo := repository.New(db)
 	svc := service.New(repo, redis)
 	h := handler.New(svc)
+	//额外一层redismethod，这个层里写需要访问redis的方法，供auth中间件使用
+	rm := redismethod.New(redis)
 	return &Container{
 		Config:     cfg,
 		DB:         db,
@@ -32,5 +37,6 @@ func NewContainer(cfg Config, db *gorm.DB, redis *redis.Client) *Container {
 		Repository: repo,
 		Service:    svc,
 		Handler:    h,
+		RedisStore: rm,
 	}
 }
