@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
 )
 
 // 密钥
@@ -168,6 +169,7 @@ func GetDataFromToken(token string) (*jwt.Token, error) {
 	)
 
 	if err != nil {
+		zap.L().Error("GetDataFromToken:" + err.Error())
 		return nil, err
 	}
 	return data, nil

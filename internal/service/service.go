@@ -328,7 +328,7 @@ func (s *Service) UserLogin(req dto.UserLogin) (map[string]interface{}, error) {
 		return nil, err
 	}
 	//生成accessToken，放入用户ID和用户身份(user)
-	accessToken, err := utils.GenerateUserToken(user.ID, 15*time.Second, "access")
+	accessToken, err := utils.GenerateUserToken(user.ID, 15*time.Minute, "access")
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 	"blog/pkg/response"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // 用户token
@@ -14,6 +15,7 @@ func JWTAuth() gin.HandlerFunc {
 		//从context中得到token
 		token := utils.GetTokenFromContext(c)
 		if token == "" {
+			zap.L().Info("从context中没有得到token")
 			response.ErrWithMsg(code.Unauthorized, c)
 			c.Abort()
 			return
@@ -21,13 +23,15 @@ func JWTAuth() gin.HandlerFunc {
 		//解析token，得到Data
 		data, err := utils.GetDataFromToken(token)
 		if data == nil || err != nil {
+			zap.L().Info("从token中没有得到Data")
 			response.ErrWithMsg(code.Unauthorized, c)
 			c.Abort()
 			return
 		}
-		//解析token，得到claim
+		//解析data，得到claim
 		var claim *utils.CustomClaims
 		if claim = utils.GetClaimFromData(data); claim == nil {
+			zap.L().Info("从data中没有得到claim")
 			response.ErrWithMsg(code.Unauthorized, c)
 			c.Abort()
 			return
@@ -41,37 +45,13 @@ func JWTAuth() gin.HandlerFunc {
 		}
 		//如果type==access,无效，401，Abort+return
 		if claim.Type == "access" && data.Valid == false {
+			zap.L().Info("accessToken无效")
 			response.ErrWithMsg(code.AccessTokenExpired, c)
 			c.Abort()
 			return
 		}
 	}
-	//	return func(c *gin.Context) {
-	//		//从token中解析出CustomClaims结构体(UserId，Role，Type),同时检测token的有效
-	//		claims, ok := utils.ParseClaims(c)
-	//		if !ok {
-	//			return
-	//		}
-	//		//获得token
-	//		token := utils.GetToken(c)
-	//		if token == "" {
-	//			response.ErrWithMsg(code.Unauthorized, c)
-	//			c.Abort()
-	//			return
-	//		}
-	//		//获得CustomClaims
-	//		claim, err := utils.GetClaimFromToken(token)
-	//		if err != nil {
-	//			response.ErrWithMsg(code.Unauthorized, c)
-	//			c.Abort()
-	//			return
-	//		}
-	//		//如果类型是access:
-	//		//
-	//		c.Set("userID", claims.UserID)
-	//		c.Set("role", claims.Role)
-	//		c.Next()
-	//	}
+
 }
 
 // 检测管理员token

@@ -64,12 +64,13 @@ func (h *UserHandler) TokenRefresh(c *gin.Context) {
 	}
 	//如果type==refresh,有效，且redis里存在，则创建新accessToken，Abort+return
 	if claim.Type == "refresh" && data.Valid && h.svc.RefreshTokenIsExist(strconv.FormatUint(claim.UserID, 10)) == true {
-		accessToken, err := utils.GenerateUserToken(claim.UserID, 15*time.Second, "access")
+		accessToken, err := utils.GenerateUserToken(claim.UserID, 15*time.Minute, "access")
 		if err != nil {
 			zap.L().Error("generate access token failed" + err.Error())
 			response.ErrWithMsg(code.InternalError, c)
 			return
 		}
+
 		response.SuccessWithData(map[string]interface{}{"access_token": accessToken}, c)
 		return
 	}
