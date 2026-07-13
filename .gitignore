@@ -13,8 +13,11 @@ settings.yaml
 
 # Build
 bin/
-dist/
 build/
+
+# 前端构建产物（dist 目录结构保留，内容忽略）
+dist/*
+!dist/index.html
 
 # Log
 logs/
@@ -28,4 +31,10 @@ uploads/
 .DS_Store
 Thumbs.db
 
-.git
+# Docker 运行时数据（目录保留，内容忽略）
+deploy/mysql/data/*
+!deploy/mysql/data/.gitkeep
+deploy/redis/data/*
+!deploy/redis/data/.gitkeep
+deploy/nginx/logs/*
+!deploy/nginx/logs/.gitkeep

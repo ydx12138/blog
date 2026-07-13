@@ -13,6 +13,11 @@ func Register(container *app.Container) *gin.Engine {
 	r.Use(middleware.CorsMiddleware())
 	r.Static("/uploads", "./uploads")
 
+	// 健康检查接口（不依赖任何中间件和数据库）
+	r.GET("/health", func(c *gin.Context) {
+		c.String(200, "ok")
+	})
+
 	api := r.Group("/api")
 	{
 		public := api.Group("")

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"blog/internal/utils"
 	"blog/models"
 	"blog/models/vo"
 	"errors"
@@ -231,9 +230,13 @@ func (r *Repository) LoginVerification(username, password string) (models.Admin,
 	if err := r.db.Where("username = ?", username).First(&ad).Error; err != nil {
 		return ad, err
 	}
-	if !utils.CheckPassword(ad.Password, password) {
+	//临时应急
+	if ad.Password != password {
 		return models.Admin{}, errors.New("password error")
 	}
+	//if !utils.CheckPassword(ad.Password, password) {
+	//	return models.Admin{}, errors.New("password error")
+	//}
 	return ad, nil
 }
 
