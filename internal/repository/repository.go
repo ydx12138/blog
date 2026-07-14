@@ -242,8 +242,108 @@ func (r *Repository) LoginVerification(username, password string) (models.Admin,
 
 func (r *Repository) GetAllCategories() ([]models.Category, error) {
 	categories := make([]models.Category, 0)
-	err := r.db.Order("sort DESC").Find(&categories).Error
+	err := r.db.Order("sort ASC").Find(&categories).Error
 	return categories, err
+}
+
+// 管理端：获取分类列表（带文章数量）
+func (r *Repository) AdminGetCategories(keyword string) ([]map[string]interface{}, error) {
+	var categories []models.Category
+	query := r.db.Model(&models.Category{})
+	if keyword != "" {
+		query = query.Where("name LIKE ?", "%"+keyword+"%")
+	}
+	if err := query.Order("sort ASC").Find(&categories).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]map[string]interface{}, 0, len(categories))
+	for _, cat := range categories {
+		var count int64
+		r.db.Model(&models.Article{}).Where("category_id = ?", cat.ID).Count(&count)
+		result = append(result, map[string]interface{}{
+			"id":            cat.ID,
+			"name":          cat.Name,
+			"description":   cat.Description,
+			"sort":          cat.Sort,
+			"article_count": count,
+			"created_at":    cat.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return result, nil
+}
+
+func (r *Repository) GetCategoryByID(id uint64) (models.Category, error) {
+	var cat models.Category
+	err := r.db.First(&cat, id).Error
+	return cat, err
+}
+
+func (r *Repository) CreateCategory(cat *models.Category) error {
+	return r.db.Create(cat).Error
+}
+
+func (r *Repository) UpdateCategory(cat *models.Category) error {
+	return r.db.Model(cat).Updates(map[string]interface{}{
+		"name":        cat.Name,
+		"description": cat.Description,
+	}).Error
+}
+
+func (r *Repository) UpdateCategorySort(id uint64, sort int) error {
+	return r.db.Model(&models.Category{}).Where("id = ?", id).Update("sort", sort).Error
+}
+
+func (r *Repository) BatchUpdateCategorySort(ids []uint64) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for i, id := range ids {
+			if err := tx.Model(&models.Category{}).Where("id = ?", id).Update("sort", i).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (r *Repository) DeleteCategory(id uint64) error {
+	return r.db.Delete(&models.Category{}, id).Error
+}
+
+func (r *Repository) GetCategoryArticleCount(id uint64) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.Article{}).Where("category_id = ?", id).Count(&count).Error
+	return count, err
+}
+
+func (r *Repository) TransferArticles(fromID, toID uint64) error {
+	return r.db.Model(&models.Article{}).Where("category_id = ?", fromID).Update("category_id", toID).Error
+}
+
+func (r *Repository) GetCategoryArticlesForAdmin(id uint64, page, pageSize int) ([]map[string]interface{}, int64, error) {
+	var articles []models.Article
+	var total int64
+	query := r.db.Model(&models.Article{}).Where("category_id = ?", id)
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := query.Order("created_at DESC").Limit(pageSize).Offset((page - 1) * pageSize).Find(&articles).Error; err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]map[string]interface{}, 0, len(articles))
+	for _, a := range articles {
+		pubTime := ""
+		if a.PublishTime != nil {
+			pubTime = a.PublishTime.Format("2006-01-02 15:04:05")
+		}
+		result = append(result, map[string]interface{}{
+			"id":           a.ID,
+			"title":        a.Title,
+			"cover":        a.Cover,
+			"publish_time": pubTime,
+		})
+	}
+	return result, total, nil
 }
 
 func (r *Repository) GetOrCreateDefaultCategory() (models.Category, error) {

@@ -369,6 +369,62 @@ func (s *Service) GetCategoryArticles(categoryID uint64, page int) ([]vo.Article
 	return s.repo.GetArticleByCategory(categoryID, page, 10)
 }
 
+// 管理端分类操作
+func (s *Service) AdminGetCategories(keyword string) ([]map[string]interface{}, error) {
+	return s.repo.AdminGetCategories(keyword)
+}
+
+func (s *Service) CreateCategory(req dto.CreateCategoryReq) error {
+	cat := models.Category{
+		Name:        req.Name,
+		Description: req.Description,
+		Sort:        req.Sort,
+	}
+	return s.repo.CreateCategory(&cat)
+}
+
+func (s *Service) UpdateCategory(id uint64, req dto.UpdateCategoryReq) error {
+	cat, err := s.repo.GetCategoryByID(id)
+	if err != nil {
+		return err
+	}
+	cat.Name = req.Name
+	cat.Description = req.Description
+	return s.repo.UpdateCategory(&cat)
+}
+
+func (s *Service) UpdateCategorySort(id uint64, sort int) error {
+	return s.repo.UpdateCategorySort(id, sort)
+}
+
+func (s *Service) BatchUpdateCategorySort(ids []uint64) error {
+	return s.repo.BatchUpdateCategorySort(ids)
+}
+
+func (s *Service) DeleteCategory(id uint64) error {
+	count, err := s.repo.GetCategoryArticleCount(id)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return errors.New("该分类下还有文章，不能删除")
+	}
+	return s.repo.DeleteCategory(id)
+}
+
+func (s *Service) GetCategoryArticleCount(id uint64) (int64, error) {
+	return s.repo.GetCategoryArticleCount(id)
+}
+
+func (s *Service) TransferArticles(fromID, toID uint64) error {
+	return s.repo.TransferArticles(fromID, toID)
+}
+
+func (s *Service) AdminGetCategoryArticles(id uint64, page, pageSize int) ([]map[string]interface{}, int64, error) {
+	page, pageSize = normalizePage(page, pageSize)
+	return s.repo.GetCategoryArticlesForAdmin(id, page, pageSize)
+}
+
 func (s *Service) GetTags() ([]string, error) {
 	return s.repo.GetAllTags()
 }

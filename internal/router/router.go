@@ -70,5 +70,16 @@ func Register(container *app.Container) *gin.Engine {
 	adminAuth.PUT("/users/:id/unban", h.Admin.UnbanUser)
 	adminAuth.DELETE("/users/:id", h.Admin.DeleteUser)
 
+	// 分类管理
+	adminAuth.GET("/categories", h.Admin.GetCategories)
+	adminAuth.POST("/categories", h.Admin.CreateCategory)
+	adminAuth.PUT("/categories/:id", h.Admin.UpdateCategory)
+	adminAuth.PUT("/categories/:id/sort", h.Admin.UpdateCategorySort)
+	adminAuth.PUT("/categories/sort", h.Admin.BatchUpdateCategorySort)
+	adminAuth.DELETE("/categories/:id", h.Admin.DeleteCategory)
+	adminAuth.GET("/categories/:id/articles", h.Admin.GetCategoryArticles)
+	adminAuth.GET("/categories/:id/article-count", h.Admin.GetCategoryArticleCount)
+	adminAuth.POST("/categories/transfer", h.Admin.TransferArticles)
+
 	return r
 }

@@ -120,3 +120,28 @@ type UserPutPhone struct {
 	Phone            string `form:"phone" json:"phone" binding:"required"`
 	VerificationCode string `form:"verification_code" json:"verification_code" binding:"required"`
 }
+
+// 分类管理
+type CreateCategoryReq struct {
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+	Sort        int    `json:"sort"`
+}
+
+type UpdateCategoryReq struct {
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+}
+
+type UpdateCategorySortReq struct {
+	Sort int `json:"sort" binding:"required"`
+}
+
+type BatchUpdateSortReq struct {
+	Ids []uint64 `json:"ids" binding:"required"`
+}
+
+type TransferArticlesReq struct {
+	FromCategoryID uint64 `json:"from_category_id" binding:"required"`
+	ToCategoryID   uint64 `json:"to_category_id" binding:"required"`
+}

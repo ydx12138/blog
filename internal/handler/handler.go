@@ -640,6 +640,144 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 	response.SuccessWithMsg("删除成功", c)
 }
 
+// 分类管理
+func (h *AdminHandler) GetCategories(c *gin.Context) {
+	keyword := c.Query("keyword")
+	categories, err := h.svc.AdminGetCategories(keyword)
+	if err != nil {
+		zap.L().Error("AdminGetCategories:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(categories, c)
+}
+
+func (h *AdminHandler) CreateCategory(c *gin.Context) {
+	var req dto.CreateCategoryReq
+	if err := c.ShouldBind(&req); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if err := h.svc.CreateCategory(req); err != nil {
+		zap.L().Error("CreateCategory:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithMsg("创建成功", c)
+}
+
+func (h *AdminHandler) UpdateCategory(c *gin.Context) {
+	id, err := parseParamID(c)
+	if err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	var req dto.UpdateCategoryReq
+	if err := c.ShouldBind(&req); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if err := h.svc.UpdateCategory(id, req); err != nil {
+		zap.L().Error("UpdateCategory:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithMsg("更新成功", c)
+}
+
+func (h *AdminHandler) UpdateCategorySort(c *gin.Context) {
+	id, err := parseParamID(c)
+	if err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	var req dto.UpdateCategorySortReq
+	if err := c.ShouldBind(&req); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if err := h.svc.UpdateCategorySort(id, req.Sort); err != nil {
+		zap.L().Error("UpdateCategorySort:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithMsg("排序已更新", c)
+}
+
+func (h *AdminHandler) BatchUpdateCategorySort(c *gin.Context) {
+	var req dto.BatchUpdateSortReq
+	if err := c.ShouldBind(&req); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if err := h.svc.BatchUpdateCategorySort(req.Ids); err != nil {
+		zap.L().Error("BatchUpdateCategorySort:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithMsg("排序已更新", c)
+}
+
+func (h *AdminHandler) DeleteCategory(c *gin.Context) {
+	id, err := parseParamID(c)
+	if err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if err := h.svc.DeleteCategory(id); err != nil {
+		zap.L().Error("DeleteCategory:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithMsg("删除成功", c)
+}
+
+func (h *AdminHandler) GetCategoryArticleCount(c *gin.Context) {
+	id, err := parseParamID(c)
+	if err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	count, err := h.svc.GetCategoryArticleCount(id)
+	if err != nil {
+		zap.L().Error("GetCategoryArticleCount:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(map[string]int64{"count": count}, c)
+}
+
+func (h *AdminHandler) TransferArticles(c *gin.Context) {
+	var req dto.TransferArticlesReq
+	if err := c.ShouldBind(&req); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if err := h.svc.TransferArticles(req.FromCategoryID, req.ToCategoryID); err != nil {
+		zap.L().Error("TransferArticles:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithMsg("转移成功", c)
+}
+
+func (h *AdminHandler) GetCategoryArticles(c *gin.Context) {
+	id, err := parseParamID(c)
+	if err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	var q dto.PageQueryWithSize
+	_ = c.ShouldBindQuery(&q)
+	articles, total, err := h.svc.AdminGetCategoryArticles(id, q.Page, q.PageSize)
+	if err != nil {
+		zap.L().Error("GetCategoryArticles:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(map[string]interface{}{"list": articles, "total": total}, c)
+}
+
 var allowedExts = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
 }
