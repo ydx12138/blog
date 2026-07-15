@@ -56,7 +56,7 @@ func CreateClient(sms config.SmsConfig) (_result *dypnsapi20170525.Client, _err 
 	return _result, _err
 }
 
-func send(phone string) (_err error) {
+func Send(phone string) (_err error) {
 	var sms = config.Cfg.Sms
 
 	// 创建SDK客户端
@@ -132,7 +132,7 @@ func send(phone string) (_err error) {
 	}
 	return _err
 }
-func receive(phone string, code string) (_err error) {
+func Receive(phone string, code string) (_err error) {
 	var sms = config.Cfg.Sms
 	client, _err := CreateClient(sms)
 	if _err != nil {
