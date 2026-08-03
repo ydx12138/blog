@@ -267,6 +267,27 @@ func (h *UserHandler) Login(c *gin.Context) {
 	response.SuccessWithData(data, c)
 }
 
+func (h *UserHandler) WechatLogin(c *gin.Context) {
+	var req dto.WechatLoginReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	data, err := h.svc.WechatLogin(c.Request.Context(), req.Code)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrUserDisabled):
+			response.ErrWithMsg(code.Forbidden, c)
+		case errors.Is(err, service.ErrWechatUnavailable):
+			response.ErrWithMsg(code.InternalError, c)
+		default:
+			response.ErrWithMsg(code.BadRequest, c)
+		}
+		return
+	}
+	response.SuccessWithData(data, c)
+}
+
 func (h *UserHandler) GetCategories(c *gin.Context) {
 	categories, err := h.svc.GetCategories()
 	if err != nil {
