@@ -125,7 +125,7 @@ type SmsConfig struct {
 }*/
 func LoadConfig() (*Config, error) {
 	cfg := &Config{}
-	viper.SetConfigFile(flags.FlagOptions.File)
+	viper.SetConfigFile("settings.yaml")
 	viper.SetConfigType("yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		return cfg, err
