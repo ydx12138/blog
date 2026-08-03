@@ -3,6 +3,7 @@ package config
 import (
 	"blog/flags"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
@@ -24,7 +25,19 @@ type Config struct {
 	Redis        RedisConfig  `mapstructure:"redis"`
 	OssConfig    OssConfig    `mapstructure:"oss"`
 	MailConfig   MailConfig   `mapstructure:"mail"`
+	Wechat       WechatConfig `mapstructure:"wechat"`
 	Sms          SmsConfig    `mapstructure:"sms"`
+}
+
+type WechatConfig struct {
+	AppID     string `mapstructure:"app_id"`
+	AppSecret string `mapstructure:"app_secret"`
+}
+
+func (w *WechatConfig) ApplyEnv() {
+	if secret := os.Getenv("WECHAT_APP_SECRET"); secret != "" {
+		w.AppSecret = secret
+	}
 }
 
 type RedisConfig struct {
@@ -133,6 +146,7 @@ func LoadConfig() (*Config, error) {
 	if err := viper.Unmarshal(cfg); err != nil {
 		return cfg, err
 	}
+	cfg.Wechat.ApplyEnv()
 	zap.L().Info("读取配置文件" + flags.FlagOptions.File + "成功")
 	Cfg = cfg
 	return cfg, nil
