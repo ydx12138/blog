@@ -3,11 +3,14 @@ package service
 import (
 	"blog/internal/repository"
 	"blog/internal/utils"
+	"blog/internal/wechat"
 	"blog/models"
 	"blog/models/dto"
 	"blog/models/vo"
 	"context"
+	"crypto/rand"
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"strconv"
 	"strings"
@@ -23,21 +26,77 @@ const registerCodeTTL = 60 * time.Second
 const resetPasswordCodeTTL = 60 * time.Second
 
 var (
-	ErrUserExists       = errors.New("user exists")
-	ErrUserNotExists    = errors.New("user not exists")
-	ErrPassword         = errors.New("password error")
-	ErrUserDisabled     = errors.New("user disabled")
-	ErrVerificationCode = errors.New("verification code invalid or expired")
-	ErrCoderepeated     = errors.New("verification codes cannot be obtained repeatedly")
+	ErrUserExists        = errors.New("user exists")
+	ErrUserNotExists     = errors.New("user not exists")
+	ErrPassword          = errors.New("password error")
+	ErrUserDisabled      = errors.New("user disabled")
+	ErrVerificationCode  = errors.New("verification code invalid or expired")
+	ErrCoderepeated      = errors.New("verification codes cannot be obtained repeatedly")
+	ErrWechatUnavailable = errors.New("wechat login is not configured")
 )
 
 type Service struct {
-	repo  *repository.Repository
-	redis *redis.Client
+	repo   *repository.Repository
+	redis  *redis.Client
+	wechat wechat.Exchanger
 }
 
 func New(repo *repository.Repository, redis *redis.Client) *Service {
 	return &Service{repo: repo, redis: redis}
+}
+
+func (s *Service) SetWechatExchanger(exchanger wechat.Exchanger) {
+	s.wechat = exchanger
+}
+
+func BuildWechatUser(openID string) (models.User, error) {
+	passwordBytes := make([]byte, 32)
+	if _, err := rand.Read(passwordBytes); err != nil {
+		return models.User{}, err
+	}
+	nicknameBytes := make([]byte, 3)
+	if _, err := rand.Read(nicknameBytes); err != nil {
+		return models.User{}, err
+	}
+	password, err := utils.HashPassword(hex.EncodeToString(passwordBytes))
+	if err != nil {
+		return models.User{}, err
+	}
+	return models.User{
+		Email:        "wechat-" + openID + "@wechat.local",
+		Password:     password,
+		Nickname:     "微信用户" + hex.EncodeToString(nicknameBytes),
+		Status:       1,
+		WechatOpenID: openID,
+	}, nil
+}
+
+func (s *Service) WechatLogin(ctx context.Context, loginCode string) (map[string]interface{}, error) {
+	if s.wechat == nil {
+		return nil, ErrWechatUnavailable
+	}
+	session, err := s.wechat.ExchangeCode(ctx, loginCode)
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.repo.GetUserByWechatOpenID(session.OpenID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		user, err = BuildWechatUser(session.OpenID)
+		if err != nil {
+			return nil, err
+		}
+		if err = s.repo.CreateUser(user); err != nil {
+			return nil, err
+		}
+		user, err = s.repo.GetUserByWechatOpenID(session.OpenID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if user.Status == 2 {
+		return nil, ErrUserDisabled
+	}
+	return s.issueUserTokens(user)
 }
 
 // refreshToken是否还在
@@ -322,6 +381,10 @@ func (s *Service) UserLogin(req dto.UserLogin) (map[string]interface{}, error) {
 	if user.Status == 2 {
 		return nil, ErrUserDisabled
 	}
+	return s.issueUserTokens(user)
+}
+
+func (s *Service) issueUserTokens(user models.User) (map[string]interface{}, error) {
 	//生成refreshToken，放入用户ID和用户身份(user)
 	refreshToken, err := utils.GenerateUserToken(user.ID, 7*24*time.Hour, "refresh")
 	if err != nil {

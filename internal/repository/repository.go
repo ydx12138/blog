@@ -196,6 +196,12 @@ func (r *Repository) GetUserByEmail(email string) (models.User, error) {
 	return user, err
 }
 
+func (r *Repository) GetUserByWechatOpenID(openID string) (models.User, error) {
+	var user models.User
+	err := r.db.Where("wechat_open_id = ?", openID).First(&user).Error
+	return user, err
+}
+
 func (r *Repository) CreateUser(user models.User) error {
 	return r.db.Create(&user).Error
 }
