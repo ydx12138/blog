@@ -270,6 +270,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 func (h *UserHandler) WechatLogin(c *gin.Context) {
 	var req dto.WechatLoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Println(err)
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
@@ -281,6 +282,7 @@ func (h *UserHandler) WechatLogin(c *gin.Context) {
 		case errors.Is(err, service.ErrWechatUnavailable):
 			response.ErrWithMsg(code.InternalError, c)
 		default:
+			fmt.Println(err)
 			response.ErrWithMsg(code.BadRequest, c)
 		}
 		return
