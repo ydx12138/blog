@@ -42,6 +42,11 @@ type WechatLoginReq struct {
 	Code string `json:"code" binding:"required"`
 }
 
+type WechatPhoneReq struct {
+	PhoneTicket string `json:"phone_ticket" binding:"required"`
+	Code        string `json:"code" binding:"required"`
+}
+
 type CreateCommentReq struct {
 	ArticleID uint64 `form:"article_id" json:"article_id" binding:"required"`
 	Content   string `form:"content" json:"content" binding:"required"`

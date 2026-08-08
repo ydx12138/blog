@@ -202,6 +202,22 @@ func (r *Repository) GetUserByWechatOpenID(openID string) (models.User, error) {
 	return user, err
 }
 
+func (r *Repository) GetUserByPhone(phone string) (models.User, error) {
+	var user models.User
+	err := r.db.Where("phone = ?", phone).First(&user).Error
+	return user, err
+}
+
+func (r *Repository) GetUserByID(id uint64) (models.User, error) {
+	var user models.User
+	err := r.db.First(&user, id).Error
+	return user, err
+}
+
+func (r *Repository) UpdateUserPhone(id uint64, phone string) error {
+	return r.db.Model(&models.User{}).Where("id = ?", id).Update("phone", phone).Error
+}
+
 func (r *Repository) CreateUser(user models.User) error {
 	return r.db.Create(&user).Error
 }

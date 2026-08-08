@@ -30,7 +30,10 @@ func Register(container *app.Container) *gin.Engine {
 		public.POST("/register/code", h.User.SendRegisterCode)
 		public.POST("/register", h.User.Register)
 		public.POST("/login", h.User.Login)
+		//微信登陆
 		public.POST("/wechat/login", h.User.WechatLogin)
+		//根据授权获取手机号
+		public.POST("/wechat/phone", h.User.CompleteWechatPhoneLogin)
 		public.POST("/articles/like", h.User.LikeArticle)
 		public.GET("/tags", h.User.GetTags)
 		public.POST("/sendpwdcode", h.User.SendCodeForgetPwd)

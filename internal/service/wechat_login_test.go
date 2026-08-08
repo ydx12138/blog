@@ -26,3 +26,13 @@ func TestBuildWechatUserCreatesInternalIdentity(t *testing.T) {
 		t.Fatal("expected a bcrypt password hash")
 	}
 }
+
+func TestWechatLoginResponseRequiresPhoneWithoutToken(t *testing.T) {
+	data := phoneRequiredResponse("ticket-1")
+	if data["phone_required"] != true || data["phone_ticket"] != "ticket-1" {
+		t.Fatalf("unexpected response: %#v", data)
+	}
+	if _, ok := data["access_token"]; ok {
+		t.Fatal("phone-required response must not include an access token")
+	}
+}

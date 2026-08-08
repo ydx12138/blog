@@ -11,7 +11,7 @@ import (
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss/credentials"
 )
 
-// 只在第一次运行时
+// 只在第一次运行时给client赋值
 var client *oss.Client
 var ossConfig config.OssConfig
 
@@ -22,7 +22,6 @@ func UploadToOss(body multipart.File, path string, filename string) (string, err
 			return "", err
 		}
 	}
-
 	key := path + filename
 	request := &oss.PutObjectRequest{
 		Bucket: oss.Ptr(ossConfig.Bucket),
@@ -32,7 +31,6 @@ func UploadToOss(body multipart.File, path string, filename string) (string, err
 	if _, err := client.PutObject(context.TODO(), request); err != nil {
 		return "", err
 	}
-
 	return fmt.Sprintf("https://%s.oss-%s.aliyuncs.com/%s", ossConfig.Bucket, ossConfig.Endpoint, key), nil
 }
 
@@ -42,7 +40,6 @@ func initOssClient() error {
 	if ossConfig.AccessKeyId == "" || ossConfig.AccessKeySecret == "" || ossConfig.Bucket == "" || ossConfig.Endpoint == "" {
 		return errors.New("oss config is incomplete")
 	}
-
 	cfg := oss.LoadDefaultConfig().
 		WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
 			ossConfig.AccessKeyId,

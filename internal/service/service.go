@@ -24,6 +24,7 @@ import (
 // 验证码过期时间
 const registerCodeTTL = 60 * time.Second
 const resetPasswordCodeTTL = 60 * time.Second
+const phoneTicketTTL = 15 * time.Minute
 
 var (
 	ErrUserExists        = errors.New("user exists")
@@ -33,6 +34,8 @@ var (
 	ErrVerificationCode  = errors.New("verification code invalid or expired")
 	ErrCoderepeated      = errors.New("verification codes cannot be obtained repeatedly")
 	ErrWechatUnavailable = errors.New("wechat login is not configured")
+	ErrPhoneTicket       = errors.New("wechat phone ticket is invalid or expired")
+	ErrPhoneAlreadyBound = errors.New("phone number is already bound")
 )
 
 type Service struct {
@@ -41,8 +44,8 @@ type Service struct {
 	wechat wechat.Exchanger
 }
 
-func New(repo *repository.Repository, redis *redis.Client) *Service {
-	return &Service{repo: repo, redis: redis}
+func New(repo *repository.Repository, redis *redis.Client, exchanger wechat.Exchanger) *Service {
+	return &Service{repo: repo, redis: redis, wechat: exchanger}
 }
 
 func (s *Service) SetWechatExchanger(exchanger wechat.Exchanger) {
@@ -72,6 +75,7 @@ func BuildWechatUser(openID string) (models.User, error) {
 }
 
 func (s *Service) WechatLogin(ctx context.Context, loginCode string) (map[string]interface{}, error) {
+	//
 	if s.wechat == nil {
 		return nil, ErrWechatUnavailable
 	}
@@ -96,7 +100,98 @@ func (s *Service) WechatLogin(ctx context.Context, loginCode string) (map[string
 	if user.Status == 2 {
 		return nil, ErrUserDisabled
 	}
+	if user.Phone == nil || strings.TrimSpace(*user.Phone) == "" {
+		ticket, err := s.savePhoneTicket(user.ID)
+		if err != nil {
+			return nil, err
+		}
+		return phoneRequiredResponse(ticket), nil
+	}
 	return s.issueUserTokens(user)
+}
+
+func phoneRequiredResponse(ticket string) map[string]interface{} {
+	return map[string]interface{}{
+		"phone_required": true,
+		"phone_ticket":   ticket,
+	}
+}
+
+func (s *Service) CompleteWechatPhoneLogin(ctx context.Context, ticket, phoneCode string) (map[string]interface{}, error) {
+	if s.wechat == nil {
+		return nil, ErrWechatUnavailable
+	}
+	userID, err := s.getPhoneTicketUserID(ticket)
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user.Status == 2 {
+		return nil, ErrUserDisabled
+	}
+	phone, err := s.wechat.ExchangePhoneCode(ctx, phoneCode)
+	if err != nil {
+		return nil, err
+	}
+	boundUser, err := s.repo.GetUserByPhone(phone)
+	if err == nil && boundUser.ID != user.ID {
+		return nil, ErrPhoneAlreadyBound
+	}
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	if err = s.repo.UpdateUserPhone(user.ID, phone); err != nil {
+		return nil, err
+	}
+	if err = s.redis.Del(ctx, phoneTicketKey(ticket)).Err(); err != nil {
+		return nil, err
+	}
+	user.Phone = &phone
+	return s.issueUserTokens(user)
+}
+
+func (s *Service) savePhoneTicket(userID uint64) (string, error) {
+	if s.redis == nil {
+		return "", errors.New("redis client is nil")
+	}
+	ticketBytes := make([]byte, 32)
+	if _, err := rand.Read(ticketBytes); err != nil {
+		return "", err
+	}
+	ticket := hex.EncodeToString(ticketBytes)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := s.redis.Set(ctx, phoneTicketKey(ticket), strconv.FormatUint(userID, 10), phoneTicketTTL).Err(); err != nil {
+		return "", err
+	}
+	return ticket, nil
+}
+
+func (s *Service) getPhoneTicketUserID(ticket string) (uint64, error) {
+	if s.redis == nil || strings.TrimSpace(ticket) == "" {
+		return 0, ErrPhoneTicket
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	value, err := s.redis.Get(ctx, phoneTicketKey(ticket)).Result()
+	if errors.Is(err, redis.Nil) {
+		return 0, ErrPhoneTicket
+	}
+	if err != nil {
+		return 0, err
+	}
+	userID, err := strconv.ParseUint(value, 10, 64)
+	if err != nil || userID == 0 {
+		return 0, ErrPhoneTicket
+	}
+	return userID, nil
+}
+
+func phoneTicketKey(ticket string) string {
+	return "wechat:phone-ticket:" + ticket
 }
 
 // refreshToken是否还在

@@ -267,22 +267,50 @@ func (h *UserHandler) Login(c *gin.Context) {
 	response.SuccessWithData(data, c)
 }
 
+// 微信登陆
 func (h *UserHandler) WechatLogin(c *gin.Context) {
+	//获取前端传来的code参数
 	var req dto.WechatLoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		fmt.Println(err)
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
+	//调用微信登录函数，用code取交换open_id
 	data, err := h.svc.WechatLogin(c.Request.Context(), req.Code)
 	if err != nil {
 		switch {
+		//用户被禁用
 		case errors.Is(err, service.ErrUserDisabled):
 			response.ErrWithMsg(code.Forbidden, c)
+		//微信不可用
 		case errors.Is(err, service.ErrWechatUnavailable):
 			response.ErrWithMsg(code.InternalError, c)
 		default:
 			fmt.Println(err)
+			response.ErrWithMsg(code.BadRequest, c)
+		}
+		return
+	}
+	response.SuccessWithData(data, c)
+}
+
+func (h *UserHandler) CompleteWechatPhoneLogin(c *gin.Context) {
+	var req dto.WechatPhoneReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	data, err := h.svc.CompleteWechatPhoneLogin(c.Request.Context(), req.PhoneTicket, req.Code)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrUserDisabled):
+			response.ErrWithMsg(code.Forbidden, c)
+		case errors.Is(err, service.ErrPhoneTicket), errors.Is(err, service.ErrPhoneAlreadyBound):
+			response.ErrWithMsg(code.BadRequest, c)
+		case errors.Is(err, service.ErrWechatUnavailable):
+			response.ErrWithMsg(code.InternalError, c)
+		default:
 			response.ErrWithMsg(code.BadRequest, c)
 		}
 		return
