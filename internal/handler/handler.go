@@ -83,7 +83,24 @@ func (h *UserHandler) TokenRefresh(c *gin.Context) {
 
 // 主要：验证token过期否
 func (h *UserHandler) UsersMe(c *gin.Context) {
-	return
+	userID, ok := currentUserID(c)
+	if !ok {
+		response.ErrWithMsg(code.Unauthorized, c)
+		return
+	}
+
+	profile, err := h.svc.CurrentUserProfile(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.ErrWithMsg(code.ErrUserNotFound, c)
+			return
+		}
+		zap.L().Error("UsersMe:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+
+	response.SuccessWithData(profile, c)
 }
 
 // 修改手机号

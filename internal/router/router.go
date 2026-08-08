@@ -38,13 +38,13 @@ func Register(container *app.Container) *gin.Engine {
 		public.GET("/tags", h.User.GetTags)
 		public.POST("/sendpwdcode", h.User.SendCodeForgetPwd)
 		public.POST("/updatePasswordByCode", h.User.UpdatePasswordByCode)
-		public.POST("/users/me", h.User.UsersMe)
 		//refreshToken刷新
 		public.POST("/token/refresh", h.User.TokenRefresh)
 	}
 	{
 		apiAuth := api.Group("")
 		apiAuth.Use(middleware.JWTAuth())
+		apiAuth.GET("/users/me", h.User.UsersMe)
 		apiAuth.POST("/comments", h.User.CreateComment)
 		apiAuth.POST("/updatephonenumber", h.User.UpdatePhoneNumber)
 	}
