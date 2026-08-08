@@ -8,6 +8,7 @@ import (
 	"blog/internal/router"
 	"blog/internal/utils"
 	"blog/seed"
+	"log"
 
 	"go.uber.org/zap"
 )
@@ -40,7 +41,7 @@ func main() {
 	initRedis, err := core.InitRedis()
 	if err != nil {
 		zap.L().Error("redis init failed: " + err.Error())
-		return
+		log.Print("redis加载失败")
 	}
 
 	//加载敏感词
