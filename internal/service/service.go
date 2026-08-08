@@ -755,6 +755,24 @@ func (s *Service) Users(page, pageSize int, keyword string, status uint64) ([]mo
 	return s.repo.GetUsersByPage(page, pageSize, keyword, status)
 }
 
+func UserProfileFromUser(user models.User) vo.UserProfile {
+	return vo.UserProfile{
+		ID:        user.ID,
+		Email:     user.Email,
+		Nickname:  user.Nickname,
+		Phone:     user.Phone,
+		CreatedAt: user.CreatedAt,
+	}
+}
+
+func (s *Service) CurrentUserProfile(userID uint64) (vo.UserProfile, error) {
+	user, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return vo.UserProfile{}, err
+	}
+	return UserProfileFromUser(user), nil
+}
+
 func (s *Service) BanUser(id uint64) error {
 	return s.repo.UpdateUserStatus(id, 2)
 }
