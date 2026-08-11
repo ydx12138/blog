@@ -1,6 +1,7 @@
 package service
 
 import (
+	"blog/config"
 	"blog/internal/repository"
 	"blog/internal/utils"
 	"blog/internal/wechat"
@@ -36,6 +37,7 @@ var (
 	ErrWechatUnavailable = errors.New("wechat login is not configured")
 	ErrPhoneTicket       = errors.New("wechat phone ticket is invalid or expired")
 	ErrPhoneAlreadyBound = errors.New("phone number is already bound")
+	ErrDefaultAvatar     = errors.New("default avatar is not configured")
 )
 
 type Service struct {
@@ -71,6 +73,19 @@ func BuildWechatUser(openID string) (models.User, error) {
 		Nickname:     "微信用户" + hex.EncodeToString(nicknameBytes),
 		Status:       1,
 		WechatOpenID: openID,
+	}, nil
+}
+
+func BuildEmailUser(email, password, nickname, avatar string) (models.User, error) {
+	avatar = strings.TrimSpace(avatar)
+	if avatar == "" {
+		return models.User{}, ErrDefaultAvatar
+	}
+	return models.User{
+		Email:    email,
+		Password: password,
+		Avatar:   avatar,
+		Nickname: nickname,
 	}, nil
 }
 
@@ -449,11 +464,15 @@ func (s *Service) Register(req dto.UserRegister) error {
 		return err
 	}
 	//创建新用户
-	if err := s.repo.CreateUser(models.User{
-		Email:    email,
-		Password: hashPassword,
-		Nickname: req.Nickname,
-	}); err != nil {
+	avatar := ""
+	if config.Cfg != nil {
+		avatar = config.Cfg.OssConfig.DefaultAvatar
+	}
+	user, err := BuildEmailUser(email, hashPassword, req.Nickname, avatar)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.CreateUser(user); err != nil {
 		return err
 	}
 	//删除验证码

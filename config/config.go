@@ -91,6 +91,7 @@ type OssConfig struct {
 	Endpoint        string `mapstructure:"endpoint"`
 	Bucket          string `mapstructure:"bucket"`
 	Image_path      string `mapstructure:"image_path"`
+	DefaultAvatar   string `mapstructure:"default_avatar"`
 }
 
 /*type ServerConfig struct {

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"blog/internal/repository"
 	"blog/internal/utils"
 	"blog/pkg/code"
 	"blog/pkg/response"
@@ -9,9 +10,16 @@ import (
 	"go.uber.org/zap"
 )
 
+var redisMiddleRepo repository.RedisMiddleRepository
+
+func SetRedisRepo(authMiddleRepo repository.RedisMiddleRepository) {
+	redisMiddleRepo = authMiddleRepo
+}
+
 // 用户token
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+
 		//从context中得到token
 		token := utils.GetTokenFromContext(c)
 		if token == "" {

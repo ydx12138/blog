@@ -3,6 +3,7 @@ package app
 import (
 	"blog/config"
 	"blog/internal/handler"
+	"blog/internal/middleware"
 	"blog/internal/redismethod"
 	"blog/internal/repository"
 	"blog/internal/service"
@@ -26,15 +27,18 @@ type Container struct {
 }
 
 func NewContainer(cfg Config, db *gorm.DB, redis *redis.Client) *Container {
-	//三层架构
+	//repository
 	repo := repository.New(db)
+	authMiddleRepo := repository.NewRedisMiddleRepo(redis)
+	middleware.SetRedisRepo(authMiddleRepo)
 	//微信客户端
 	var wechatClient wechat.Exchanger
 	if strings.TrimSpace(cfg.Wechat.AppID) != "" && strings.TrimSpace(cfg.Wechat.AppSecret) != "" {
 		wechatClient = wechat.NewClient(cfg.Wechat.AppID, cfg.Wechat.AppSecret, "")
 	}
+	//service
 	svc := service.New(repo, redis, wechatClient)
-
+	//handle
 	h := handler.New(svc)
 	//额外一层redismethod，这个层里写需要访问redis的方法，供auth中间件使用
 	rm := redismethod.New(redis)
