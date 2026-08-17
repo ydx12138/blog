@@ -25,6 +25,7 @@ var (
 	InternalError       = ErrorCode{200, 1005, "服务器内部错误"}
 	AccessTokenExpired  = ErrorCode{200, 1006, "access_token过期"}
 	RefreshTokenExpired = ErrorCode{200, 1007, "refresh_token过期"}
+	SessionReplaced     = ErrorCode{200, 1008, "账号已在其他地方登录"}
 )
 
 var (

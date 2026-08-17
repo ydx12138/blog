@@ -18,6 +18,7 @@ type CustomClaims struct {
 	UserID               uint64 `json:"user_id"` //要放到token里的信息
 	Role                 string `json:"role"`
 	Type                 string `json:"type"`
+	SessionID            string `json:"session_id,omitempty"`
 	jwt.RegisteredClaims        //jwt标准字段
 }
 
@@ -43,10 +44,17 @@ func GenerateAdminToken(userID uint64, duration time.Duration) (string, error) {
 
 // 生成Usertoken
 func GenerateUserToken(userID uint64, duration time.Duration, typel string) (string, error) {
+	return GenerateUserTokenWithSession(userID, duration, typel, "")
+}
+
+// GenerateUserTokenWithSession 生成带 PC 会话 ID 的用户 JWT。
+// 参数：userID 为用户 ID，duration 为 Token 有效期，typel 为 access 或 refresh，sessionID 为当前登录会话 ID；返回 JWT 字符串和生成错误。
+func GenerateUserTokenWithSession(userID uint64, duration time.Duration, typel, sessionID string) (string, error) {
 	claims := CustomClaims{
-		UserID: userID,
-		Role:   "user",
-		Type:   typel,
+		UserID:    userID,
+		Role:      "user",
+		Type:      typel,
+		SessionID: sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)), // 7天过期
 			IssuedAt:  jwt.NewNumericDate(time.Now()),               //签发时间

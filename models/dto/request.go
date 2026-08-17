@@ -58,7 +58,7 @@ type CreateArticleReq struct {
 	Summary     string `json:"summary"`
 	Content     string `json:"content"`
 	ContentType int8   `json:"content_type"`
-	Cover       string `json:"cover"`
+	Cover       string `json:"cover" binding:"required"`
 	CategoryID  uint64 `json:"category_id"`
 	Tags        string `json:"tags"`
 	Status      int8   `json:"status"`

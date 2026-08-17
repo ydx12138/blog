@@ -5,6 +5,7 @@ import (
 	"blog/internal/utils"
 	"blog/pkg/code"
 	"blog/pkg/response"
+	"crypto/subtle"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -46,6 +47,25 @@ func JWTAuth() gin.HandlerFunc {
 		}
 		//如果type==access,data.Valid==true有效，则通过
 		if claim.Type == "access" && data.Valid {
+			if claim.SessionID != "" {
+				if redisMiddleRepo == nil {
+					response.ErrWithMsg(code.InternalError, c)
+					c.Abort()
+					return
+				}
+				currentSession, err := redisMiddleRepo.GetUserSession(claim.UserID)
+				if err != nil {
+					zap.L().Error("read pc login session failed: " + err.Error())
+					response.ErrWithMsg(code.InternalError, c)
+					c.Abort()
+					return
+				}
+				if currentSession == "" || subtle.ConstantTimeCompare([]byte(currentSession), []byte(claim.SessionID)) != 1 {
+					response.ErrWithMsg(code.SessionReplaced, c)
+					c.Abort()
+					return
+				}
+			}
 			c.Set("userID", claim.UserID)
 			c.Set("role", claim.Role)
 			c.Set("type", claim.Type)

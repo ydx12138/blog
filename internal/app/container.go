@@ -37,7 +37,7 @@ func NewContainer(cfg Config, db *gorm.DB, redis *redis.Client) *Container {
 		wechatClient = wechat.NewClient(cfg.Wechat.AppID, cfg.Wechat.AppSecret, "")
 	}
 	//service
-	svc := service.New(repo, redis, wechatClient)
+	svc := service.New(repo, redis, wechatClient, authMiddleRepo)
 	//handle
 	h := handler.New(svc)
 	//额外一层redismethod，这个层里写需要访问redis的方法，供auth中间件使用

@@ -38,16 +38,22 @@ var (
 	ErrPhoneTicket       = errors.New("wechat phone ticket is invalid or expired")
 	ErrPhoneAlreadyBound = errors.New("phone number is already bound")
 	ErrDefaultAvatar     = errors.New("default avatar is not configured")
+	ErrSessionInvalid    = errors.New("pc login session is invalid or replaced")
 )
 
 type Service struct {
-	repo   *repository.Repository
-	redis  *redis.Client
-	wechat wechat.Exchanger
+	repo        *repository.Repository
+	redis       *redis.Client
+	wechat      wechat.Exchanger
+	sessionRepo repository.RedisMiddleRepository
 }
 
-func New(repo *repository.Repository, redis *redis.Client, exchanger wechat.Exchanger) *Service {
-	return &Service{repo: repo, redis: redis, wechat: exchanger}
+func New(repo *repository.Repository, redis *redis.Client, exchanger wechat.Exchanger, sessionRepos ...repository.RedisMiddleRepository) *Service {
+	var sessionRepo repository.RedisMiddleRepository
+	if len(sessionRepos) > 0 {
+		sessionRepo = sessionRepos[0]
+	}
+	return &Service{repo: repo, redis: redis, wechat: exchanger, sessionRepo: sessionRepo}
 }
 
 func (s *Service) SetWechatExchanger(exchanger wechat.Exchanger) {
@@ -123,6 +129,68 @@ func (s *Service) WechatLogin(ctx context.Context, loginCode string) (map[string
 		return phoneRequiredResponse(ticket), nil
 	}
 	return s.issueUserTokens(user)
+}
+
+const pcSessionTTL = 7 * 24 * time.Hour
+
+// ValidateSession 校验 Token 中的 PC 会话 ID 是否仍是 Redis 中的当前会话。
+// 参数：userID 为用户 ID，sessionID 为 Token 携带的会话 ID；返回 nil 表示有效，返回 ErrSessionInvalid 表示已被替换或不存在，其他错误表示 Redis 访问失败。
+func (s *Service) ValidateSession(userID uint64, sessionID string) error {
+	if s.sessionRepo == nil || strings.TrimSpace(sessionID) == "" {
+		return ErrSessionInvalid
+	}
+	currentSession, err := s.sessionRepo.GetUserSession(userID)
+	if err != nil {
+		return err
+	}
+	if currentSession == "" || subtle.ConstantTimeCompare([]byte(currentSession), []byte(sessionID)) != 1 {
+		return ErrSessionInvalid
+	}
+	return nil
+}
+
+// generateSessionID 使用密码学安全随机数生成 PC 单点登录会话 ID。
+// 参数：无；返回 64 位十六进制会话 ID和生成错误。
+func generateSessionID() (string, error) {
+	value := make([]byte, 32)
+	if _, err := rand.Read(value); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(value), nil
+}
+
+// issuePCUserTokens 为 PC 邮箱登录生成带同一 sessionID 的 access 和 refresh Token，并保存当前会话。
+// 参数：user 为已通过密码校验的用户；返回登录响应数据和签发或保存失败错误。
+func (s *Service) issuePCUserTokens(user models.User) (map[string]interface{}, error) {
+	if s.sessionRepo == nil {
+		return nil, errors.New("session repository is nil")
+	}
+	sessionID, err := generateSessionID()
+	if err != nil {
+		return nil, err
+	}
+	refreshToken, err := utils.GenerateUserTokenWithSession(user.ID, pcSessionTTL, "refresh", sessionID)
+	if err != nil {
+		return nil, err
+	}
+	accessToken, err := utils.GenerateUserTokenWithSession(user.ID, 15*time.Minute, "access", sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.sessionRepo.SaveUserSession(user.ID, sessionID, pcSessionTTL); err != nil {
+		return nil, err
+	}
+	if err := s.SaveRefreshToken(refreshTokenKey(user.ID), refreshToken, pcSessionTTL); err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"email":         user.Email,
+		"avatar":        user.Avatar,
+		"nickname":      user.Nickname,
+		"id":            user.ID,
+	}, nil
 }
 
 func phoneRequiredResponse(ticket string) map[string]interface{} {
@@ -495,7 +563,7 @@ func (s *Service) UserLogin(req dto.UserLogin) (map[string]interface{}, error) {
 	if user.Status == 2 {
 		return nil, ErrUserDisabled
 	}
-	return s.issueUserTokens(user)
+	return s.issuePCUserTokens(user)
 }
 
 func (s *Service) issueUserTokens(user models.User) (map[string]interface{}, error) {
@@ -778,6 +846,7 @@ func UserProfileFromUser(user models.User) vo.UserProfile {
 	return vo.UserProfile{
 		ID:        user.ID,
 		Email:     user.Email,
+		Avatar:    user.Avatar,
 		Nickname:  user.Nickname,
 		Phone:     user.Phone,
 		CreatedAt: user.CreatedAt,

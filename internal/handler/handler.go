@@ -62,9 +62,20 @@ func (h *UserHandler) TokenRefresh(c *gin.Context) {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
+	if claim.SessionID != "" {
+		if err := h.svc.ValidateSession(claim.UserID, claim.SessionID); err != nil {
+			if errors.Is(err, service.ErrSessionInvalid) {
+				response.ErrWithMsg(code.SessionReplaced, c)
+			} else {
+				zap.L().Error("validate pc login session failed: " + err.Error())
+				response.ErrWithMsg(code.InternalError, c)
+			}
+			return
+		}
+	}
 	//如果type==refresh,有效，且redis里存在，则创建新accessToken，Abort+return
 	if claim.Type == "refresh" && data.Valid && h.svc.RefreshTokenIsExist(strconv.FormatUint(claim.UserID, 10)) == true {
-		accessToken, err := utils.GenerateUserToken(claim.UserID, 15*time.Minute, "access")
+		accessToken, err := utils.GenerateUserTokenWithSession(claim.UserID, 15*time.Minute, "access", claim.SessionID)
 		if err != nil {
 			zap.L().Error("generate access token failed" + err.Error())
 			response.ErrWithMsg(code.InternalError, c)
