@@ -620,6 +620,22 @@ func (s *Service) AdminGetCategories(keyword string) ([]map[string]interface{}, 
 }
 
 func (s *Service) CreateCategory(req dto.CreateCategoryReq) error {
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" || len([]rune(req.Name)) > 50 {
+		return errors.New("分类名称不合法")
+	}
+	if _, err := s.repo.GetCategoryByName(req.Name); err == nil {
+		return errors.New("分类名称已存在")
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	if req.Sort == 0 {
+		maxSort, err := s.repo.GetMaxCategorySort()
+		if err != nil {
+			return err
+		}
+		req.Sort = maxSort + 1
+	}
 	cat := models.Category{
 		Name:        req.Name,
 		Description: req.Description,
@@ -631,6 +647,15 @@ func (s *Service) CreateCategory(req dto.CreateCategoryReq) error {
 func (s *Service) UpdateCategory(id uint64, req dto.UpdateCategoryReq) error {
 	cat, err := s.repo.GetCategoryByID(id)
 	if err != nil {
+		return err
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" || len([]rune(req.Name)) > 50 {
+		return errors.New("分类名称不合法")
+	}
+	if existing, err := s.repo.GetCategoryByName(req.Name); err == nil && existing.ID != id {
+		return errors.New("分类名称已存在")
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
 	cat.Name = req.Name
@@ -646,15 +671,27 @@ func (s *Service) BatchUpdateCategorySort(ids []uint64) error {
 	return s.repo.BatchUpdateCategorySort(ids)
 }
 
-func (s *Service) DeleteCategory(id uint64) error {
+func (s *Service) DeleteCategory(id uint64, req dto.DeleteCategoryReq) error {
 	count, err := s.repo.GetCategoryArticleCount(id)
 	if err != nil {
 		return err
 	}
-	if count > 0 {
-		return errors.New("该分类下还有文章，不能删除")
+	if count == 0 {
+		return s.repo.DeleteCategory(id)
 	}
-	return s.repo.DeleteCategory(id)
+	if req.TargetCategoryID > 0 {
+		if req.TargetCategoryID == id {
+			return errors.New("不能迁移到当前分类")
+		}
+		if _, err := s.repo.GetCategoryByID(req.TargetCategoryID); err != nil {
+			return err
+		}
+		return s.repo.TransferArticlesAndDeleteCategory(id, req.TargetCategoryID)
+	}
+	if req.Force && strings.TrimSpace(req.ConfirmText) == "确认删除" {
+		return s.repo.DeleteCategoryWithArticles(id)
+	}
+	return errors.New("该分类下还有文章，请确认删除或迁移文章")
 }
 
 func (s *Service) GetCategoryArticleCount(id uint64) (int64, error) {
@@ -662,6 +699,12 @@ func (s *Service) GetCategoryArticleCount(id uint64) (int64, error) {
 }
 
 func (s *Service) TransferArticles(fromID, toID uint64) error {
+	if fromID == toID {
+		return errors.New("不能迁移到当前分类")
+	}
+	if _, err := s.repo.GetCategoryByID(toID); err != nil {
+		return err
+	}
 	return s.repo.TransferArticles(fromID, toID)
 }
 

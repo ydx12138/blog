@@ -803,7 +803,14 @@ func (h *AdminHandler) DeleteCategory(c *gin.Context) {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
-	if err := h.svc.DeleteCategory(id); err != nil {
+	var req dto.DeleteCategoryReq
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			response.ErrWithMsg(code.BadRequest, c)
+			return
+		}
+	}
+	if err := h.svc.DeleteCategory(id, req); err != nil {
 		zap.L().Error("DeleteCategory:" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return

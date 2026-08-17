@@ -150,6 +150,13 @@ type BatchUpdateSortReq struct {
 	Ids []uint64 `json:"ids" binding:"required"`
 }
 
+// DeleteCategoryReq 描述删除分类时的安全确认与文章迁移参数；无；返回请求绑定结果。
+type DeleteCategoryReq struct {
+	Force            bool   `json:"force"`
+	ConfirmText      string `json:"confirm_text"`
+	TargetCategoryID uint64 `json:"target_category_id"`
+}
+
 type TransferArticlesReq struct {
 	FromCategoryID uint64 `json:"from_category_id" binding:"required"`
 	ToCategoryID   uint64 `json:"to_category_id" binding:"required"`

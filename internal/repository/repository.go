@@ -264,7 +264,7 @@ func (r *Repository) LoginVerification(username, password string) (models.Admin,
 
 func (r *Repository) GetAllCategories() ([]models.Category, error) {
 	categories := make([]models.Category, 0)
-	err := r.db.Order("sort ASC").Find(&categories).Error
+	err := r.db.Order("sort DESC").Find(&categories).Error
 	return categories, err
 }
 
@@ -275,7 +275,7 @@ func (r *Repository) AdminGetCategories(keyword string) ([]map[string]interface{
 	if keyword != "" {
 		query = query.Where("name LIKE ?", "%"+keyword+"%")
 	}
-	if err := query.Order("sort ASC").Find(&categories).Error; err != nil {
+	if err := query.Order("sort DESC").Find(&categories).Error; err != nil {
 		return nil, err
 	}
 
@@ -290,6 +290,7 @@ func (r *Repository) AdminGetCategories(keyword string) ([]map[string]interface{
 			"sort":          cat.Sort,
 			"article_count": count,
 			"created_at":    cat.CreatedAt.Format("2006-01-02 15:04:05"),
+			"updated_at":    cat.UpdatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 	return result, nil
@@ -299,6 +300,20 @@ func (r *Repository) GetCategoryByID(id uint64) (models.Category, error) {
 	var cat models.Category
 	err := r.db.First(&cat, id).Error
 	return cat, err
+}
+
+// GetCategoryByName 根据分类名称查询分类；参数 name 为分类名称；返回分类记录和查询错误。
+func (r *Repository) GetCategoryByName(name string) (models.Category, error) {
+	var cat models.Category
+	err := r.db.Where("name = ?", name).First(&cat).Error
+	return cat, err
+}
+
+// GetMaxCategorySort 查询当前分类的最大排序值；无参数；返回最大排序值和查询错误。
+func (r *Repository) GetMaxCategorySort() (int, error) {
+	var maxSort int
+	err := r.db.Model(&models.Category{}).Select("COALESCE(MAX(sort), 0)").Scan(&maxSort).Error
+	return maxSort, err
 }
 
 func (r *Repository) CreateCategory(cat *models.Category) error {
@@ -319,7 +334,7 @@ func (r *Repository) UpdateCategorySort(id uint64, sort int) error {
 func (r *Repository) BatchUpdateCategorySort(ids []uint64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		for i, id := range ids {
-			if err := tx.Model(&models.Category{}).Where("id = ?", id).Update("sort", i).Error; err != nil {
+			if err := tx.Model(&models.Category{}).Where("id = ?", id).Update("sort", len(ids)-i).Error; err != nil {
 				return err
 			}
 		}
@@ -331,6 +346,16 @@ func (r *Repository) DeleteCategory(id uint64) error {
 	return r.db.Delete(&models.Category{}, id).Error
 }
 
+// DeleteCategoryWithArticles 事务删除分类及其全部文章；参数 id 为分类 ID；返回事务执行错误。
+func (r *Repository) DeleteCategoryWithArticles(id uint64) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("category_id = ?", id).Delete(&models.Article{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&models.Category{}, id).Error
+	})
+}
+
 func (r *Repository) GetCategoryArticleCount(id uint64) (int64, error) {
 	var count int64
 	err := r.db.Model(&models.Article{}).Where("category_id = ?", id).Count(&count).Error
@@ -339,6 +364,16 @@ func (r *Repository) GetCategoryArticleCount(id uint64) (int64, error) {
 
 func (r *Repository) TransferArticles(fromID, toID uint64) error {
 	return r.db.Model(&models.Article{}).Where("category_id = ?", fromID).Update("category_id", toID).Error
+}
+
+// TransferArticlesAndDeleteCategory 事务迁移分类文章并删除原分类；参数为原分类和目标分类 ID；返回事务执行错误。
+func (r *Repository) TransferArticlesAndDeleteCategory(fromID, toID uint64) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.Article{}).Where("category_id = ?", fromID).Update("category_id", toID).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&models.Category{}, fromID).Error
+	})
 }
 
 func (r *Repository) GetCategoryArticlesForAdmin(id uint64, page, pageSize int) ([]map[string]interface{}, int64, error) {
