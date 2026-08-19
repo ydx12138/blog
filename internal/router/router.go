@@ -36,6 +36,7 @@ func Register(container *app.Container) *gin.Engine {
 		public.POST("/wechat/phone", h.User.CompleteWechatPhoneLogin)
 		public.POST("/articles/like", h.User.LikeArticle)
 		public.GET("/tags", h.User.GetTags)
+		public.GET("/settings/site", h.User.GetSiteSettings)
 		public.POST("/sendpwdcode", h.User.SendCodeForgetPwd)
 		public.POST("/updatePasswordByCode", h.User.UpdatePasswordByCode)
 		//refreshToken刷新
@@ -55,6 +56,8 @@ func Register(container *app.Container) *gin.Engine {
 	adminAuth := adminGroup.Group("")
 	adminAuth.Use(middleware.JWTAuthForAdmin())
 	adminAuth.GET("/dashboard", h.Admin.GetDashboard)
+	adminAuth.GET("/settings/site", h.Admin.GetSiteSettings)
+	adminAuth.PUT("/settings/site", h.Admin.UpdateSiteSettings)
 	adminAuth.GET("/articles", h.Admin.GetArticles)
 	adminAuth.GET("/articles/:id", h.Admin.GetArticle)
 	adminAuth.POST("/articles", h.Admin.CreateArticle)

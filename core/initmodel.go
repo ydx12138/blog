@@ -20,6 +20,7 @@ func InitModel(db *gorm.DB) {
 		&model2.Article{},
 		&model2.Comment{},
 		&model2.Token{},
+		&model2.Setting{},
 	)
 	if err != nil {
 		zap.L().Panic("migrate tables failed: " + err.Error())

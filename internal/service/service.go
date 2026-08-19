@@ -475,6 +475,9 @@ func (s *Service) SearchArticle(keyword string) ([]vo.ArticleSimple, error) {
 }
 
 func (s *Service) SendRegisterCode(req dto.SendRegisterCodeReq) error {
+	if err := s.RequireFeatureEnabled(settingRegisterEnabled); err != nil {
+		return err
+	}
 	email := normalizeEmail(req.Email)
 	//查找邮箱
 	existUser, err := s.repo.GetUserByEmail(email)
@@ -513,6 +516,9 @@ func (s *Service) SendRegisterCode(req dto.SendRegisterCodeReq) error {
 
 // 注册
 func (s *Service) Register(req dto.UserRegister) error {
+	if err := s.RequireFeatureEnabled(settingRegisterEnabled); err != nil {
+		return err
+	}
 	email := normalizeEmail(req.Email)
 	//判断验证码是否无误
 	if err := s.verifyRegisterCode(email, req.Code); err != nil {
@@ -604,10 +610,16 @@ func (s *Service) SaveRefreshToken(key, token string, duration time.Duration) er
 }
 
 func (s *Service) GetCategories() ([]models.Category, error) {
+	if err := s.RequireFeatureEnabled(settingCategoriesEnabled); err != nil {
+		return nil, err
+	}
 	return s.repo.GetAllCategories()
 }
 
 func (s *Service) GetCategoryArticles(categoryID uint64, page int) ([]vo.ArticleSimple, error) {
+	if err := s.RequireFeatureEnabled(settingCategoriesEnabled); err != nil {
+		return nil, err
+	}
 	if page < 1 {
 		page = 1
 	}
@@ -730,6 +742,9 @@ func (s *Service) GetComments(articleID uint64, page int) ([]vo.CommentVO, int64
 
 // 保存评论
 func (s *Service) CreateComment(req dto.CreateCommentReq, userID uint64) error {
+	if err := s.RequireFeatureEnabled(settingCommentsEnabled); err != nil {
+		return err
+	}
 	//处理敏感词
 	var words []string
 	if utils.Has(req.Content) == true {
@@ -897,6 +912,9 @@ func UserProfileFromUser(user models.User) vo.UserProfile {
 }
 
 func (s *Service) CurrentUserProfile(userID uint64) (vo.UserProfile, error) {
+	if err := s.RequireFeatureEnabled(settingProfileEnabled); err != nil {
+		return vo.UserProfile{}, err
+	}
 	user, err := s.repo.GetUserByID(userID)
 	if err != nil {
 		return vo.UserProfile{}, err

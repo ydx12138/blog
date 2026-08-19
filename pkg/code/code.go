@@ -28,6 +28,8 @@ var (
 	SessionReplaced     = ErrorCode{200, 1008, "账号已在其他地方登录"}
 )
 
+var FeatureDisabled = ErrorCode{200, 1009, "功能暂未开放"}
+
 var (
 	ErrUserExist        = ErrorCode{200, 2001, "用户已存在"}
 	ErrUserNotFound     = ErrorCode{200, 2002, "用户不存在"}

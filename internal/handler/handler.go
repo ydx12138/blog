@@ -35,6 +35,46 @@ type AdminHandler struct {
 	svc *service.Service
 }
 
+// GetSiteSettings 获取前台站点配置；参数为 Gin 请求上下文，返回值通过统一响应写入配置或错误信息。
+func (h *UserHandler) GetSiteSettings(c *gin.Context) {
+	settings, err := h.svc.GetSiteSettings()
+	if err != nil {
+		zap.L().Error("GetSiteSettings: " + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(settings, c)
+}
+
+// GetSiteSettings 获取管理端站点配置；参数为 Gin 请求上下文，返回值通过统一响应写入配置或错误信息。
+func (h *AdminHandler) GetSiteSettings(c *gin.Context) {
+	settings, err := h.svc.GetAdminSiteSettings()
+	if err != nil {
+		zap.L().Error("AdminGetSiteSettings: " + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(settings, c)
+}
+
+// UpdateSiteSettings 更新管理端站点配置；参数为 Gin 请求上下文中的配置 JSON，返回值通过统一响应写入保存结果。
+func (h *AdminHandler) UpdateSiteSettings(c *gin.Context) {
+	var req dto.UpdateSiteSettingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if err := h.svc.UpdateSiteSettings(req); err != nil {
+		if errors.Is(err, service.ErrInvalidSiteSetting) {
+			response.ErrWithMsg(code.BadRequest, c)
+			return
+		}
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithMsg("站点配置保存成功", c)
+}
+
 func New(svc *service.Service) *Handler {
 	return &Handler{
 		User:  &UserHandler{svc: svc},
@@ -102,6 +142,10 @@ func (h *UserHandler) UsersMe(c *gin.Context) {
 
 	profile, err := h.svc.CurrentUserProfile(userID)
 	if err != nil {
+		if errors.Is(err, service.ErrFeatureDisabled) {
+			response.ErrWithMsg(code.FeatureDisabled, c)
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.ErrWithMsg(code.ErrUserNotFound, c)
 			return
@@ -226,6 +270,10 @@ func (h *UserHandler) Register(c *gin.Context) {
 	}
 	//注册
 	if err := h.svc.Register(req); err != nil {
+		if errors.Is(err, service.ErrFeatureDisabled) {
+			response.ErrWithMsg(code.FeatureDisabled, c)
+			return
+		}
 		//用户已存在
 		if errors.Is(err, service.ErrUserExists) {
 			response.ErrWithMsg(code.ErrUserExist, c)
@@ -254,6 +302,10 @@ func (h *UserHandler) SendRegisterCode(c *gin.Context) {
 	}
 	//
 	if err := h.svc.SendRegisterCode(req); err != nil {
+		if errors.Is(err, service.ErrFeatureDisabled) {
+			response.ErrWithMsg(code.FeatureDisabled, c)
+			return
+		}
 		if errors.Is(err, service.ErrUserExists) {
 			response.ErrWithMsg(code.ErrUserExist, c)
 			return
@@ -349,6 +401,10 @@ func (h *UserHandler) CompleteWechatPhoneLogin(c *gin.Context) {
 func (h *UserHandler) GetCategories(c *gin.Context) {
 	categories, err := h.svc.GetCategories()
 	if err != nil {
+		if errors.Is(err, service.ErrFeatureDisabled) {
+			response.ErrWithMsg(code.FeatureDisabled, c)
+			return
+		}
 		zap.L().Error("GetCategories:" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return
@@ -364,6 +420,10 @@ func (h *UserHandler) GetCategoryArticles(c *gin.Context) {
 	}
 	articles, err := h.svc.GetCategoryArticles(q.CategoryID, q.Page)
 	if err != nil {
+		if errors.Is(err, service.ErrFeatureDisabled) {
+			response.ErrWithMsg(code.FeatureDisabled, c)
+			return
+		}
 		zap.L().Error("GetCategoryArticles:" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return
@@ -429,6 +489,10 @@ func (h *UserHandler) CreateComment(c *gin.Context) {
 	}
 	// 保存评论
 	if err := h.svc.CreateComment(req, uid); err != nil {
+		if errors.Is(err, service.ErrFeatureDisabled) {
+			response.ErrWithMsg(code.FeatureDisabled, c)
+			return
+		}
 		zap.L().Error("CreateComment:" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return
