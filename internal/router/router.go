@@ -22,6 +22,7 @@ func Register(container *app.Container) *gin.Engine {
 	{
 		public := api.Group("")
 		public.GET("/articles", h.User.GetArticles)
+		public.GET("/articles/ranking", h.User.GetArticleRanking)
 		public.GET("/articles/detail", h.User.GetArticle)
 		public.GET("/articles/search", h.User.SearchArticle)
 		public.GET("/categories", h.User.GetCategories)

@@ -37,6 +37,7 @@ type AdminHandler struct {
 
 // GetSiteSettings 获取前台站点配置；参数为 Gin 请求上下文，返回值通过统一响应写入配置或错误信息。
 func (h *UserHandler) GetSiteSettings(c *gin.Context) {
+	c.Request.Context()
 	settings, err := h.svc.GetSiteSettings()
 	if err != nil {
 		zap.L().Error("GetSiteSettings: " + err.Error())
@@ -221,6 +222,24 @@ func (h *UserHandler) GetArticles(c *gin.Context) {
 		return
 	}
 	response.SuccessWithData(map[string]interface{}{"list": articles, "total": total}, c)
+}
+
+// GetArticleRanking 返回点赞数最高的文章；接收可选 limit 查询参数；响应文章摘要列表或统一错误信息。
+func (h *UserHandler) GetArticleRanking(c *gin.Context) {
+	var q struct {
+		Limit int `form:"limit"`
+	}
+	if err := c.ShouldBindQuery(&q); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	articles, err := h.svc.GetArticleRanking(q.Limit)
+	if err != nil {
+		zap.L().Error("GetArticleRanking:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(articles, c)
 }
 
 func (h *UserHandler) GetArticle(c *gin.Context) {

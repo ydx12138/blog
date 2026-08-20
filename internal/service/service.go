@@ -461,6 +461,14 @@ func (s *Service) GetArticles(page, pageSize int) ([]vo.ArticleSimple, int64, er
 	return s.repo.GetArticleByPage(page, pageSize)
 }
 
+// GetArticleRanking 获取点赞数最高的已发布文章；参数 limit 为最多返回数量；返回文章摘要列表和查询错误。
+func (s *Service) GetArticleRanking(limit int) ([]vo.ArticleSimple, error) {
+	if limit <= 0 || limit > 10 {
+		limit = 10
+	}
+	return s.repo.GetArticleRanking(limit)
+}
+
 func (s *Service) GetArticle(id uint64) (vo.ArticleDetail, error) {
 	detail, err := s.repo.GetArticleDetail(id)
 	if err != nil {

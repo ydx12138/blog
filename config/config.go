@@ -3,10 +3,12 @@ package config
 import (
 	"blog/flags"
 	"fmt"
-	"os"
+	"log"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -32,12 +34,6 @@ type Config struct {
 type WechatConfig struct {
 	AppID     string `mapstructure:"app_id"`
 	AppSecret string `mapstructure:"app_secret"`
-}
-
-func (w *WechatConfig) ApplyEnv() {
-	if secret := os.Getenv("WECHAT_APP_SECRET"); secret != "" {
-		w.AppSecret = secret
-	}
 }
 
 type RedisConfig struct {
@@ -124,31 +120,75 @@ type SmsConfig struct {
 	CaseAuthPolicy   int64  `mapstructure:"case_auth_policy"`
 }
 
-// LoadConfig 加载配置文件
-/*func LoadConfig() error {
-	viper.SetConfigFile(flags.FlagOptions.File)
-	viper.SetConfigType("yaml")
-	if err := viper.ReadInConfig(); err != nil {
-		return err
-	}
-	if err := viper.Unmarshal(&Cfg); err != nil {
-		return err
-	}
-	zap.L().Info("读取配置文件" + flags.FlagOptions.File + "成功")
-	return nil
-}*/
 func LoadConfig() (*Config, error) {
+
+	// 1. 加载 .env 文件到环境变量
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found, using environment variables")
+	}
+
+	// 2. 初始化 Viper
+	v := viper.New()
+	v.SetConfigFile("settings.yaml")
+	v.SetConfigType("yaml")
+
+	// 3. 绑定环境变量（自动将 YAML 键名转换为环境变量）
+	// 例如：server.port -> ENJOYMALL_SERVER_PORT
+	v.SetEnvPrefix("BLOG")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+	if err := v.BindEnv("mysql.db", "BLOG_MYSQL_DATABASE", "MYSQL_DATABASE"); err != nil {
+		return nil, err
+	}
+
 	cfg := &Config{}
-	viper.SetConfigFile("settings.yaml")
-	viper.SetConfigType("yaml")
-	if err := viper.ReadInConfig(); err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		return cfg, err
 	}
-	if err := viper.Unmarshal(cfg); err != nil {
+	if err := v.Unmarshal(cfg); err != nil {
 		return cfg, err
 	}
-	cfg.Wechat.ApplyEnv()
 	zap.L().Info("读取配置文件" + flags.FlagOptions.File + "成功")
 	Cfg = cfg
 	return cfg, nil
 }
+
+//func Load() (*Config, error) {
+//	// 1. 加载 .env 文件到环境变量
+//	if err := godotenv.Load(); err != nil {
+//		log.Println("Warning: .env file not found, using environment variables")
+//	}
+//
+//	// 2. 初始化 Viper
+//	v := viper.New()
+//	v.SetConfigName("config")
+//	v.SetConfigType("yaml")
+//	v.AddConfigPath("./configs")
+//	v.AddConfigPath(".")
+//
+//	// 3. 绑定环境变量（自动将 YAML 键名转换为环境变量）
+//	// 例如：server.port -> ENJOYMALL_SERVER_PORT
+//	v.SetEnvPrefix("ENJOYMALL")
+//	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+//	v.AutomaticEnv()
+//
+//	// 4. 显式绑定 Coze 配置的环境变量（处理下划线键名）
+//	v.BindEnv("coze.bot_id", "ENJOYMALL_COZE_BOT_ID")
+//	v.BindEnv("coze.review_summary_bot_id", "ENJOYMALL_COZE_REVIEW_SUMMARY_BOT_ID")
+//	v.BindEnv("coze.access_token", "ENJOYMALL_COZE_ACCESS_TOKEN")
+//	v.BindEnv("coze.api_url", "ENJOYMALL_COZE_API_URL")
+//	v.BindEnv("coze.timeout", "ENJOYMALL_COZE_TIMEOUT")
+//
+//	// 5. 读取配置文件
+//	if err := v.ReadInConfig(); err != nil {
+//		log.Fatal("Error reading config.yaml:", err)
+//	}
+//
+//	// 6. 解析配置到结构体
+//
+//	if err := v.Unmarshal(&cfg); err != nil {
+//		log.Fatal("Error unmarshaling config:", err)
+//	}
+//
+//	return cfg, nil
+//}

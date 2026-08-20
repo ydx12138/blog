@@ -53,6 +53,24 @@ func (r *Repository) GetArticleByPage(page int, pageSize int) ([]vo.ArticleSimpl
 	return articleList, total, err
 }
 
+// GetArticleRanking 查询点赞数最高的已发布文章；参数 limit 为最多返回的文章数；返回文章摘要列表和查询错误。
+func (r *Repository) GetArticleRanking(limit int) ([]vo.ArticleSimple, error) {
+	articleList := make([]vo.ArticleSimple, 0)
+	err := r.db.Model(models.Article{}).
+		Select(`
+			article.id, article.title, article.summary, article.cover,
+			article.category_id, c.name AS category_name,
+			article.view_count, article.like_count, article.comment_count,
+			article.tags, article.created_at, article.updated_at
+		`).
+		Joins("LEFT JOIN category c ON article.category_id = c.id").
+		Where("article.status = ?", 2).
+		Order("article.like_count DESC, article.created_at DESC").
+		Limit(limit).
+		Scan(&articleList).Error
+	return articleList, err
+}
+
 func (r *Repository) GetArticleDetail(id uint64) (vo.ArticleDetail, error) {
 	var detail vo.ArticleDetail
 	result := r.db.Model(models.Article{}).
