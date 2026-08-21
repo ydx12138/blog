@@ -1,30 +1,109 @@
-# 博客后端
+# 懂你 Blog 后端
 
-## 微信小程序登录部署
+基于 Go、Gin 与 GORM 构建的个人博客 API 服务，为 PC 博客前端提供内容、认证、互动和后台管理能力，也保留了微信小程序登录扩展接口。
 
-微信小程序使用 `POST /api/wechat/login` 将 `wx.login` 返回的临时 `code` 发送给后端。后端向微信 `code2Session` 服务换取 openid，首次登录自动创建用户并签发项目现有的 JWT。
+## 核心能力
 
-### 配置
+- 文章、分类、评论与点赞
+- 邮箱验证码注册、账号登录与密码找回
+- JWT 认证与 Redis 单点登录控制
+- 管理后台的文章、草稿、评论、用户、分类与网站设置管理
+- OSS 图片上传与敏感词过滤
+- 可配置站点名称、注册、分类、个人页、评论、社交链接和头像
+- 微信登录与手机号获取的服务端封装
 
-在服务器的 `settings.yaml` 中添加微信小程序 AppID，AppSecret 不要写入仓库：
+## 架构
+
+项目遵循传统三层架构：
+
+```text
+handler -> service -> repository -> MySQL / Redis
+```
+
+```text
+internal/
+├── handler/        # HTTP 请求处理与参数绑定
+├── service/        # 业务逻辑
+├── repository/     # MySQL、Redis 数据访问
+├── middleware/     # 鉴权与中间件
+└── utils/          # 公共工具
+models/
+├── dto/            # 请求模型
+└── vo/             # 响应模型
+pkg/code/           # 业务响应码
+```
+
+## 技术栈
+
+- Go 1.25
+- Gin
+- GORM
+- MySQL
+- Redis
+- JWT
+- Viper
+- Zap
+- Gomail
+- 阿里云 OSS
+
+## 本地运行
+
+运行前请准备 Go 1.25、MySQL 8 与 Redis 7，并在项目根目录创建自己的 `settings.yaml` 配置文件。
+
+```bash
+go mod download
+go run .
+```
+
+服务默认监听 `8080` 端口，可使用健康检查确认服务状态：
+
+```bash
+curl http://127.0.0.1:8080/health
+```
+
+需要初始化演示数据时：
+
+```bash
+go run . -seed
+```
+
+配置中应使用自己的数据库、Redis、邮件与对象存储参数。例如：
 
 ```yaml
-wechat:
-  app_id: "你的微信小程序 AppID"
-  app_secret: ""
+mysql:
+  host: "127.0.0.1"
+  port: 3306
+  username: "your_username"
+  password: "your_password"
+redis:
+  host: "127.0.0.1"
+  port: 6379
+mail:
+  host: "smtp.example.com"
+  username: "your_email@example.com"
+oss:
+  endpoint: "your_oss_endpoint"
+  access_key_id: "your_access_key_id"
+  access_key_secret: "your_access_key_secret"
 ```
 
-通过服务器环境变量提供 AppSecret：
+## Docker 部署
 
-```env
-WECHAT_APP_SECRET=你的微信小程序AppSecret
+项目提供 MySQL、Redis、Go 服务与 Nginx 的 Docker Compose 编排：
+
+```bash
+docker compose up -d --build
+curl http://127.0.0.1/health
 ```
 
-`.env.example` 仅为变量名示例，不能填入真实密钥后提交。服务端不会保存或返回微信的 `session_key`。
+部署前请按 `docker-compose.yml` 与 `settings.docker.yaml` 配置实际环境参数；前端构建产物可按 Compose 文件中的说明挂载到 Nginx。
 
-### 发布前检查
+## 安全说明
 
-1. 后端首次带此版本启动时，`AutoMigrate` 会为 `user` 表增加唯一的 `wechat_open_id` 字段。
-2. 在微信公众平台将生产环境 HTTPS 域名添加到“request 合法域名”。微信小程序正式版不能请求 HTTP 地址。
-3. 当前 IP 地址仅用于本地开发调试；购买域名并部署 HTTPS 后，需要同步修改小程序 `services/config.js` 的 `BASE_URL`。
-4. 使用真实设备完成一次评论：首次评论应触发微信登录并自动建号，随后评论复用本地 JWT；点赞不需要登录。
+- 不要将真实的数据库密码、OSS 密钥、邮件授权码、短信密钥或微信 AppSecret 提交到仓库。
+- 示例配置只应使用占位符；已泄露或曾被提交的密钥，应立即前往对应平台轮换。
+- 当前仅微信 `AppSecret` 支持通过 `WECHAT_APP_SECRET` 环境变量覆盖，其他配置仍由 YAML 文件读取。
+
+## 相关项目
+
+前端项目位于同级目录：`../vue6122`。
