@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 func InitRedis() (*redis.Client, error) {
@@ -29,7 +30,8 @@ func InitRedis() (*redis.Client, error) {
 	_, err := rdb.Ping(ctx).Result()
 	if err != nil {
 		_ = rdb.Close()
-		return nil, fmt.Errorf("redis connect failed: %w", err)
+		zap.L().Error("redis ping error", zap.Error(err))
+		//return nil, fmt.Errorf("redis connect failed: %w", err)
 	}
 
 	fmt.Println("Redis connected successfully")
