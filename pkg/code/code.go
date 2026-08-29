@@ -36,6 +36,7 @@ var (
 	ErrPassword         = ErrorCode{200, 2003, "密码错误"}
 	EmailRepeat         = ErrorCode{200, 2004, "邮箱已经存在"}
 	ErrVerificationCode = ErrorCode{200, 2005, "验证码错误或已过期"}
+	ErrCaptcha          = ErrorCode{200, 2006, "图形验证码错误或已过期"}
 )
 
 var (

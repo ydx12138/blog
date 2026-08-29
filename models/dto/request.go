@@ -34,8 +34,10 @@ type SendRegisterCodeReq struct {
 }
 
 type UserLogin struct {
-	Email    string `form:"email" json:"email" binding:"required,email"`
-	Password string `form:"password" json:"password" binding:"required"`
+	Email       string `form:"email" json:"email" binding:"required,email"`
+	Password    string `form:"password" json:"password" binding:"required"`
+	CaptchaID   string `form:"captcha_id" json:"captcha_id" binding:"required"`
+	CaptchaCode string `form:"captcha_code" json:"captcha_code" binding:"required,len=4"`
 }
 
 type WechatLoginReq struct {

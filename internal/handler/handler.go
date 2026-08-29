@@ -371,6 +371,10 @@ func (h *UserHandler) Login(c *gin.Context) {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
+	if !base64Captcha.DefaultMemStore.Verify(req.CaptchaID, req.CaptchaCode, true) {
+		response.ErrWithMsg(code.ErrCaptcha, c)
+		return
+	}
 	//登录
 	data, err := h.svc.UserLogin(req)
 	if err != nil {
