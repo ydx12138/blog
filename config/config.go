@@ -4,6 +4,7 @@ import (
 	"blog/flags"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -148,9 +149,61 @@ func LoadConfig() (*Config, error) {
 	if err := v.Unmarshal(cfg); err != nil {
 		return cfg, err
 	}
+	applyEnvironmentOverrides(cfg)
 	zap.L().Info("读取配置文件" + flags.FlagOptions.File + "成功")
 	Cfg = cfg
 	return cfg, nil
+}
+
+// applyEnvironmentOverrides 用 BLOG_ 环境变量覆盖容器运行时配置；参数 cfg 为已解析的 YAML 配置；返回值为空。
+func applyEnvironmentOverrides(cfg *Config) {
+	cfg.SystemConfig.Host = environmentString("BLOG_SYSTEM_HOST", cfg.SystemConfig.Host)
+	cfg.SystemConfig.Port = environmentInt("BLOG_SYSTEM_PORT", cfg.SystemConfig.Port)
+	cfg.SystemConfig.Env = environmentString("BLOG_SYSTEM_ENV", cfg.SystemConfig.Env)
+	cfg.LogConfig.Level = environmentString("BLOG_LOG_LEVEL", cfg.LogConfig.Level)
+
+	cfg.MysqlConfig.Host = environmentString("BLOG_MYSQL_HOST", cfg.MysqlConfig.Host)
+	cfg.MysqlConfig.Port = environmentInt("BLOG_MYSQL_PORT", cfg.MysqlConfig.Port)
+	cfg.MysqlConfig.Db = environmentString("BLOG_MYSQL_DATABASE", cfg.MysqlConfig.Db)
+	cfg.MysqlConfig.User = environmentString("BLOG_MYSQL_USER", cfg.MysqlConfig.User)
+	cfg.MysqlConfig.Password = environmentString("BLOG_MYSQL_PASSWORD", environmentString("MYSQL_ROOT_PASSWORD", cfg.MysqlConfig.Password))
+
+	cfg.Redis.Host = environmentString("BLOG_REDIS_HOST", cfg.Redis.Host)
+	cfg.Redis.Port = environmentInt("BLOG_REDIS_PORT", cfg.Redis.Port)
+	cfg.Redis.Password = environmentString("BLOG_REDIS_PASSWORD", cfg.Redis.Password)
+
+	cfg.OssConfig.AccessKeyId = environmentString("BLOG_OSS_ACCESS_KEY_ID", cfg.OssConfig.AccessKeyId)
+	cfg.OssConfig.AccessKeySecret = environmentString("BLOG_OSS_ACCESS_KEY_SECRET", cfg.OssConfig.AccessKeySecret)
+	cfg.OssConfig.Endpoint = environmentString("BLOG_OSS_ENDPOINT", cfg.OssConfig.Endpoint)
+	cfg.OssConfig.Bucket = environmentString("BLOG_OSS_BUCKET", cfg.OssConfig.Bucket)
+	cfg.OssConfig.DefaultAvatar = environmentString("BLOG_OSS_DEFAULT_AVATAR", cfg.OssConfig.DefaultAvatar)
+
+	cfg.MailConfig.Username = environmentString("BLOG_MAIL_USERNAME", cfg.MailConfig.Username)
+	cfg.MailConfig.Password = environmentString("BLOG_MAIL_PASSWORD", cfg.MailConfig.Password)
+
+	cfg.Wechat.AppID = environmentString("BLOG_WECHAT_APP_ID", cfg.Wechat.AppID)
+	cfg.Wechat.AppSecret = environmentString("BLOG_WECHAT_APP_SECRET", cfg.Wechat.AppSecret)
+}
+
+// environmentString 读取非空环境变量；参数 key 为变量名、fallback 为默认值；返回环境变量或默认值。
+func environmentString(key, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		return value
+	}
+	return fallback
+}
+
+// environmentInt 读取正整数环境变量；参数 key 为变量名、fallback 为默认值；返回环境变量或默认值。
+func environmentInt(key string, fallback int) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		return fallback
+	}
+	return parsed
 }
 
 //func Load() (*Config, error) {

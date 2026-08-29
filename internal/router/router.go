@@ -31,6 +31,8 @@ func Register(container *app.Container) *gin.Engine {
 		public.POST("/register/code", h.User.SendRegisterCode)
 		public.POST("/register", h.User.Register)
 		public.POST("/login", h.User.Login)
+		// 1. 生成验证码
+		public.GET("/captcha", h.User.Captcha)
 		//微信登陆
 		public.POST("/wechat/login", h.User.WechatLogin)
 		//根据授权获取手机号

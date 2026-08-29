@@ -5,6 +5,7 @@ import (
 	"blog/internal/service"
 	"blog/internal/utils"
 	"blog/models/dto"
+	"blog/models/vo"
 	"blog/pkg/code"
 	"blog/pkg/response"
 	"errors"
@@ -34,6 +35,32 @@ type UserHandler struct {
 
 type AdminHandler struct {
 	svc *service.Service
+}
+
+func (h *UserHandler) Captcha(c *gin.Context) {
+	var store = base64Captcha.DefaultMemStore
+	// 验证码配置
+	var driver = &base64Captcha.DriverString{
+		Height:          80,
+		Width:           200,
+		NoiseCount:      0,                                      // 干扰点数量
+		ShowLineOptions: 2,                                      // 干扰线数量（2 表示中等）
+		Length:          4,                                      // 验证码长度
+		Source:          "1234567890qwertyuioplkjhgfdsazxcvbnm", // 字符集
+		Fonts:           nil,                                    // 使用默认字体
+	}
+
+	// 生成验证码
+	captcha := base64Captcha.NewCaptcha(driver, store)
+	id, b64s, _, err := captcha.Generate()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "生成验证码失败"})
+		return
+	}
+	response.SuccessWithData(vo.CaptchaResponse{
+		CaptchaId: id,
+		PicBase64: b64s,
+	}, c)
 }
 
 // GetSiteSettings 获取前台站点配置；参数为 Gin 请求上下文，返回值通过统一响应写入配置或错误信息。

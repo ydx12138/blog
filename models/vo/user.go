@@ -10,3 +10,7 @@ type UserProfile struct {
 	Phone     *string   `json:"phone"`
 	CreatedAt time.Time `json:"created_at"`
 }
+type CaptchaResponse struct {
+	CaptchaId string `json:"captchaId"` // 验证码 ID
+	PicBase64 string `json:"picBase64"` // base64 图片数据（可直接 img.src）
+}
