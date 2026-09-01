@@ -21,6 +21,7 @@ const (
 	settingProfileGithub     = "profile_github"
 	settingProfileEmail      = "profile_email"
 	settingProfileAvatar     = "profile_avatar"
+	settingProfileAbout      = "profile_about"
 )
 
 var siteSettingKeys = []string{
@@ -32,6 +33,7 @@ var siteSettingKeys = []string{
 	settingProfileGithub,
 	settingProfileEmail,
 	settingProfileAvatar,
+	settingProfileAbout,
 }
 
 var (
@@ -67,6 +69,7 @@ func (s *Service) UpdateSiteSettings(req dto.UpdateSiteSettingRequest) error {
 		{Key: settingProfileGithub, Value: strings.TrimSpace(req.ProfileGithub)},
 		{Key: settingProfileEmail, Value: strings.TrimSpace(req.ProfileEmail)},
 		{Key: settingProfileAvatar, Value: strings.TrimSpace(req.ProfileAvatar)},
+		{Key: settingProfileAbout, Value: strings.TrimSpace(req.ProfileAbout)},
 	}
 	return s.repo.UpsertSettings(settings)
 }
@@ -121,6 +124,7 @@ func siteSettingFromRows(settings []models.Setting) vo.SiteSettingVO {
 	result.ProfileGithub = strings.TrimSpace(values[settingProfileGithub])
 	result.ProfileEmail = strings.TrimSpace(values[settingProfileEmail])
 	result.ProfileAvatar = strings.TrimSpace(values[settingProfileAvatar])
+	result.ProfileAbout = strings.TrimSpace(values[settingProfileAbout])
 	return result
 }
 
@@ -146,6 +150,9 @@ func validateSiteSetting(req dto.UpdateSiteSettingRequest) error {
 		if _, err := mail.ParseAddress(email); err != nil {
 			return fmt.Errorf("%w: Email格式不正确", ErrInvalidSiteSetting)
 		}
+	}
+	if len([]rune(strings.TrimSpace(req.ProfileAbout))) > 2000 {
+		return fmt.Errorf("%w: 关于我不能超过2000个字符", ErrInvalidSiteSetting)
 	}
 	return nil
 }

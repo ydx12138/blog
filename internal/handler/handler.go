@@ -131,16 +131,28 @@ func (h *UserHandler) TokenRefresh(c *gin.Context) {
 		response.ErrWithMsg(code.BadRequest, c)
 		return
 	}
-	if claim.SessionID != "" {
-		if err := h.svc.ValidateSession(claim.UserID, claim.SessionID); err != nil {
-			if errors.Is(err, service.ErrSessionInvalid) {
-				response.ErrWithMsg(code.SessionReplaced, c)
-			} else {
-				zap.L().Error("validate pc login session failed: " + err.Error())
-				response.ErrWithMsg(code.InternalError, c)
-			}
-			return
+	if claim.SessionID == "" {
+		response.ErrWithMsg(code.SessionReplaced, c)
+		return
+	}
+	if err := h.svc.ValidateSession(claim.UserID, claim.SessionID); err != nil {
+		if errors.Is(err, service.ErrSessionInvalid) {
+			response.ErrWithMsg(code.SessionReplaced, c)
+		} else {
+			zap.L().Error("validate pc login session failed: " + err.Error())
+			response.ErrWithMsg(code.InternalError, c)
 		}
+		return
+	}
+	active, err := h.svc.IsUserActive(claim.UserID)
+	if err != nil {
+		zap.L().Error("check refresh token user status failed: " + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	if !active {
+		response.ErrWithMsg(code.UserBanned, c)
+		return
 	}
 	//如果type==refresh,有效，且redis里存在，则创建新accessToken，Abort+return
 	if claim.Type == "refresh" && data.Valid && h.svc.RefreshTokenIsExist(strconv.FormatUint(claim.UserID, 10)) == true {
@@ -185,6 +197,77 @@ func (h *UserHandler) UsersMe(c *gin.Context) {
 	}
 
 	response.SuccessWithData(profile, c)
+}
+
+// UploadAvatar 上传当前用户裁剪后的头像；参数来自 multipart 文件和登录上下文；返回 OSS 图片 URL。
+func (h *UserHandler) UploadAvatar(c *gin.Context) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		response.ErrWithMsg(code.Unauthorized, c)
+		return
+	}
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			zap.L().Error("UploadAvatar close file: " + err.Error())
+		}
+	}()
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	if !allowedExts[ext] || header.Size > 10*1024*1024 {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	headerBytes := make([]byte, 512)
+	readSize, err := file.Read(headerBytes)
+	if err != nil || readSize == 0 {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	contentType := http.DetectContentType(headerBytes[:readSize])
+	if contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/gif" && contentType != "image/webp" {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if _, err := file.Seek(0, 0); err != nil {
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	filename := fmt.Sprintf("user_%d_avatar_%d%s", userID, time.Now().UnixNano(), ext)
+	avatarURL, err := utils.UploadToOss(file, config.Cfg.OssConfig.Image_path, filename)
+	if err != nil {
+		zap.L().Error("UploadAvatar: " + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(map[string]string{"url": avatarURL}, c)
+}
+
+// UpdateAvatar 保存当前用户头像地址；参数来自 JSON 和登录上下文；返回更新结果。
+func (h *UserHandler) UpdateAvatar(c *gin.Context) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		response.ErrWithMsg(code.Unauthorized, c)
+		return
+	}
+	var req dto.UpdateUserAvatarRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	if err := h.svc.UpdateCurrentUserAvatar(userID, req.Avatar); err != nil {
+		if errors.Is(err, service.ErrInvalidUserAvatar) {
+			response.ErrWithMsg(code.BadRequest, c)
+			return
+		}
+		zap.L().Error("UpdateAvatar: " + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(map[string]string{"avatar": strings.TrimSpace(req.Avatar)}, c)
 }
 
 // 修改手机号
@@ -300,6 +383,38 @@ func (h *UserHandler) SearchArticle(c *gin.Context) {
 	articles, err := h.svc.SearchArticle(q.Keyword)
 	if err != nil {
 		zap.L().Error("SearchArticle:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(articles, c)
+}
+
+// SearchArticleResults 搜索独立结果页文章；参数为包含 keyword 查询参数的 Gin 上下文，返回文章结果或统一错误响应。
+func (h *UserHandler) SearchArticleResults(c *gin.Context) {
+	var q dto.ArticleKeyWord
+	if err := c.ShouldBindQuery(&q); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	articles, err := h.svc.SearchArticleResults(q.Keyword)
+	if err != nil {
+		zap.L().Error("SearchArticleResults:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(articles, c)
+}
+
+// SearchArticleSuggestions 获取搜索框真实建议文章；参数为包含 keyword 查询参数的 Gin 上下文，返回最多十条建议或统一错误响应。
+func (h *UserHandler) SearchArticleSuggestions(c *gin.Context) {
+	var q dto.ArticleKeyWord
+	if err := c.ShouldBindQuery(&q); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	articles, err := h.svc.SearchArticleSuggestions(q.Keyword)
+	if err != nil {
+		zap.L().Error("SearchArticleSuggestions:" + err.Error())
 		response.ErrWithMsg(code.InternalError, c)
 		return
 	}
@@ -480,6 +595,26 @@ func (h *UserHandler) GetCategoryArticles(c *gin.Context) {
 		return
 	}
 	response.SuccessWithData(articles, c)
+}
+
+// GetCategoryArticlesPage 处理分类文章无限加载请求；参数来自查询字符串；返回当前批次文章和是否还有下一批。
+func (h *UserHandler) GetCategoryArticlesPage(c *gin.Context) {
+	var q dto.CategoryArticlesPageQuery
+	if err := c.ShouldBindQuery(&q); err != nil {
+		response.ErrWithMsg(code.BadRequest, c)
+		return
+	}
+	data, err := h.svc.GetCategoryArticlesPage(q.CategoryID, q.Page, q.PageSize)
+	if err != nil {
+		if errors.Is(err, service.ErrFeatureDisabled) {
+			response.ErrWithMsg(code.FeatureDisabled, c)
+			return
+		}
+		zap.L().Error("GetCategoryArticlesPage:" + err.Error())
+		response.ErrWithMsg(code.InternalError, c)
+		return
+	}
+	response.SuccessWithData(data, c)
 }
 
 func (h *UserHandler) GetTags(c *gin.Context) {

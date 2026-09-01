@@ -109,6 +109,26 @@ func (r *Repository) SearchArticleByKey(keyword string) ([]vo.ArticleSimple, err
 	return articleList, err
 }
 
+// SearchArticles 查询已发布文章并带出正文；参数 keyword 为搜索词、limit 为返回上限，返回搜索文章和数据库错误。
+func (r *Repository) SearchArticles(keyword string, limit int) ([]vo.ArticleSearch, error) {
+	articleList := make([]vo.ArticleSearch, 0)
+	query := r.db.Model(models.Article{}).
+		Select(`
+			article.id, article.title, article.summary, article.content,
+			article.cover, article.category_id, c.name AS category_name,
+			article.view_count, article.like_count, article.comment_count,
+			article.tags, article.created_at, article.updated_at
+		`).
+		Joins("LEFT JOIN category c ON article.category_id = c.id").
+		Where("article.status = ?", 2).
+		Where("article.title like ? or article.summary like ? or article.content like ?", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%").
+		Order("article.created_at DESC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	return articleList, query.Scan(&articleList).Error
+}
+
 func (r *Repository) GetArticleByCategory(categoryID uint64, page int, pageSize int) ([]vo.ArticleSimple, error) {
 	articleList := make([]vo.ArticleSimple, 0)
 	err := r.db.Model(models.Article{}).
@@ -124,6 +144,33 @@ func (r *Repository) GetArticleByCategory(categoryID uint64, page int, pageSize 
 		Limit(pageSize).Offset((page - 1) * pageSize).
 		Scan(&articleList).Error
 	return articleList, err
+}
+
+// GetPublishedArticlesByCategoryPage 查询分类下已发布文章并多取一条判断是否还有下一批；参数为分类 ID、页码和批量大小；返回文章列表、是否还有更多和查询错误。
+func (r *Repository) GetPublishedArticlesByCategoryPage(categoryID uint64, page int, pageSize int) ([]vo.ArticleSimple, bool, error) {
+	articleList := make([]vo.ArticleSimple, 0)
+	err := r.db.Model(models.Article{}).
+		Select(`
+			article.id, article.title, article.summary, article.cover,
+			article.category_id, c.name AS category_name,
+			article.view_count, article.like_count, article.comment_count,
+			article.tags, article.created_at, article.updated_at
+		`).
+		Joins("LEFT JOIN category c ON article.category_id = c.id").
+		Where("article.status = ?", 2).
+		Where("article.category_id = ?", categoryID).
+		Order("article.created_at DESC, article.id DESC").
+		Limit(pageSize + 1).
+		Offset((page - 1) * pageSize).
+		Scan(&articleList).Error
+	if err != nil {
+		return articleList, false, err
+	}
+	hasMore := len(articleList) > pageSize
+	if hasMore {
+		articleList = articleList[:pageSize]
+	}
+	return articleList, hasMore, nil
 }
 
 func (r *Repository) IncrementViewCount(id uint64) error {
@@ -232,8 +279,20 @@ func (r *Repository) GetUserByID(id uint64) (models.User, error) {
 	return user, err
 }
 
+// GetUserStatus 查询指定用户状态；参数为用户 ID；返回状态值和数据库错误。
+func (r *Repository) GetUserStatus(userID uint64) (uint64, error) {
+	var status uint64
+	err := r.db.Model(&models.User{}).Select("status").Where("id = ?", userID).Scan(&status).Error
+	return status, err
+}
+
 func (r *Repository) UpdateUserPhone(id uint64, phone string) error {
 	return r.db.Model(&models.User{}).Where("id = ?", id).Update("phone", phone).Error
+}
+
+// UpdateUserAvatar 更新指定用户头像；参数为用户 ID 和头像 URL；返回数据库更新错误。
+func (r *Repository) UpdateUserAvatar(id uint64, avatar string) error {
+	return r.db.Model(&models.User{}).Where("id = ?", id).Update("avatar", avatar).Error
 }
 
 func (r *Repository) CreateUser(user models.User) error {

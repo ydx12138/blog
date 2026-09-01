@@ -13,6 +13,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"errors"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -39,13 +40,15 @@ var (
 	ErrPhoneAlreadyBound = errors.New("phone number is already bound")
 	ErrDefaultAvatar     = errors.New("default avatar is not configured")
 	ErrSessionInvalid    = errors.New("pc login session is invalid or replaced")
+	ErrInvalidUserAvatar = errors.New("invalid user avatar")
 )
 
 type Service struct {
-	repo        *repository.Repository
-	redis       *redis.Client
-	wechat      wechat.Exchanger
-	sessionRepo repository.RedisMiddleRepository
+	repo           *repository.Repository
+	redis          *redis.Client
+	wechat         wechat.Exchanger
+	sessionRepo    repository.RedisMiddleRepository
+	userStatusRepo repository.UserStatusRepository
 }
 
 func New(repo *repository.Repository, redis *redis.Client, exchanger wechat.Exchanger, sessionRepos ...repository.RedisMiddleRepository) *Service {
@@ -53,7 +56,12 @@ func New(repo *repository.Repository, redis *redis.Client, exchanger wechat.Exch
 	if len(sessionRepos) > 0 {
 		sessionRepo = sessionRepos[0]
 	}
-	return &Service{repo: repo, redis: redis, wechat: exchanger, sessionRepo: sessionRepo}
+	return &Service{repo: repo, redis: redis, wechat: exchanger, sessionRepo: sessionRepo, userStatusRepo: repo}
+}
+
+// SetUserStatusRepository 替换用户状态查询仓储；参数为状态仓储；无返回值，主要用于依赖注入和测试。
+func (s *Service) SetUserStatusRepository(statusRepo repository.UserStatusRepository) {
+	s.userStatusRepo = statusRepo
 }
 
 func (s *Service) SetWechatExchanger(exchanger wechat.Exchanger) {
@@ -147,6 +155,18 @@ func (s *Service) ValidateSession(userID uint64, sessionID string) error {
 		return ErrSessionInvalid
 	}
 	return nil
+}
+
+// IsUserActive 检查用户账号是否仍可使用；参数为用户 ID；返回可用状态和查询错误。
+func (s *Service) IsUserActive(userID uint64) (bool, error) {
+	if s.userStatusRepo == nil || userID == 0 {
+		return false, errors.New("user status repository is nil")
+	}
+	status, err := s.userStatusRepo.GetUserStatus(userID)
+	if err != nil {
+		return false, err
+	}
+	return status == 1, nil
 }
 
 // generateSessionID 使用密码学安全随机数生成 PC 单点登录会话 ID。
@@ -482,6 +502,38 @@ func (s *Service) SearchArticle(keyword string) ([]vo.ArticleSimple, error) {
 	return s.repo.SearchArticleByKey(keyword)
 }
 
+// SearchArticleResults 搜索完整结果并生成命中片段；参数 keyword 为搜索词，返回结果列表和业务错误。
+func (s *Service) SearchArticleResults(keyword string) ([]vo.ArticleSearch, error) {
+	return s.searchArticles(keyword, 0)
+}
+
+// SearchArticleSuggestions 查询搜索下拉建议；参数 keyword 为搜索词，返回最多十条真实文章和业务错误。
+func (s *Service) SearchArticleSuggestions(keyword string) ([]vo.ArticleSearch, error) {
+	return s.searchArticles(keyword, 10)
+}
+
+// searchArticles 统一查询搜索文章并生成命中片段；参数 keyword 为搜索词、limit 为返回上限，返回处理后的搜索结果。
+func (s *Service) searchArticles(keyword string, limit int) ([]vo.ArticleSearch, error) {
+	keyword = strings.TrimSpace(keyword)
+	if keyword == "" {
+		return []vo.ArticleSearch{}, nil
+	}
+	articles, err := s.repo.SearchArticles(keyword, limit)
+	if err != nil {
+		return nil, err
+	}
+	for index := range articles {
+		articles[index].SearchExcerpt = utils.BuildArticleSearchExcerpt(
+			articles[index].Title,
+			articles[index].Summary,
+			articles[index].Content,
+			keyword,
+		)
+		articles[index].Content = ""
+	}
+	return articles, nil
+}
+
 func (s *Service) SendRegisterCode(req dto.SendRegisterCodeReq) error {
 	if err := s.RequireFeatureEnabled(settingRegisterEnabled); err != nil {
 		return err
@@ -632,6 +684,26 @@ func (s *Service) GetCategoryArticles(categoryID uint64, page int) ([]vo.Article
 		page = 1
 	}
 	return s.repo.GetArticleByCategory(categoryID, page, 10)
+}
+
+// GetCategoryArticlesPage 获取分类文章的下一批数据；参数为分类 ID、页码和批量大小；返回无限加载响应或业务错误。
+func (s *Service) GetCategoryArticlesPage(categoryID uint64, page, pageSize int) (vo.ArticleInfinitePage, error) {
+	if err := s.RequireFeatureEnabled(settingCategoriesEnabled); err != nil {
+		return vo.ArticleInfinitePage{}, err
+	}
+	page, pageSize = normalizePage(page, pageSize)
+	if pageSize > 30 {
+		pageSize = 30
+	}
+	articles, hasMore, err := s.repo.GetPublishedArticlesByCategoryPage(categoryID, page, pageSize)
+	if err != nil {
+		return vo.ArticleInfinitePage{}, err
+	}
+	return vo.ArticleInfinitePage{
+		List:     articles,
+		HasMore:  hasMore,
+		NextPage: page + 1,
+	}, nil
 }
 
 // 管理端分类操作
@@ -920,14 +992,21 @@ func UserProfileFromUser(user models.User) vo.UserProfile {
 }
 
 func (s *Service) CurrentUserProfile(userID uint64) (vo.UserProfile, error) {
-	if err := s.RequireFeatureEnabled(settingProfileEnabled); err != nil {
-		return vo.UserProfile{}, err
-	}
 	user, err := s.repo.GetUserByID(userID)
 	if err != nil {
 		return vo.UserProfile{}, err
 	}
 	return UserProfileFromUser(user), nil
+}
+
+// UpdateCurrentUserAvatar 校验并保存当前用户头像；参数为用户 ID 和头像 URL；返回参数或数据库错误。
+func (s *Service) UpdateCurrentUserAvatar(userID uint64, avatar string) error {
+	avatar = strings.TrimSpace(avatar)
+	parsed, err := url.ParseRequestURI(avatar)
+	if userID == 0 || err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return ErrInvalidUserAvatar
+	}
+	return s.repo.UpdateUserAvatar(userID, avatar)
 }
 
 func (s *Service) BanUser(id uint64) error {

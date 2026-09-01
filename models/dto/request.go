@@ -88,6 +88,13 @@ type CategoryArticlesQuery struct {
 	Page       int    `form:"page"`
 }
 
+// CategoryArticlesPageQuery 接收分类文章无限加载参数；参数为分类 ID、页码和单批数量；返回绑定后的查询条件。
+type CategoryArticlesPageQuery struct {
+	CategoryID uint64 `form:"category_id" binding:"required"`
+	Page       int    `form:"page"`
+	PageSize   int    `form:"page_size"`
+}
+
 type CommentListQuery struct {
 	ArticleID uint64 `form:"article_id" binding:"required"`
 	Page      int    `form:"page"`
@@ -130,6 +137,11 @@ type UserPutPhone struct {
 	Email            string `form:"email" json:"email" binding:"required,email"`
 	Phone            string `form:"phone" json:"phone" binding:"required"`
 	VerificationCode string `form:"verification_code" json:"verification_code" binding:"required"`
+}
+
+// UpdateUserAvatarRequest 接收当前用户头像更新请求；参数为已上传的头像 URL；返回值由 Handler 统一响应。
+type UpdateUserAvatarRequest struct {
+	Avatar string `json:"avatar" binding:"required"`
 }
 
 // 分类管理

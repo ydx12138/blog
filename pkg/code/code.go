@@ -26,6 +26,7 @@ var (
 	AccessTokenExpired  = ErrorCode{200, 1006, "access_token过期"}
 	RefreshTokenExpired = ErrorCode{200, 1007, "refresh_token过期"}
 	SessionReplaced     = ErrorCode{200, 1008, "账号已在其他地方登录"}
+	UserBanned          = ErrorCode{200, 1010, "账号已被封禁"}
 )
 
 var FeatureDisabled = ErrorCode{200, 1009, "功能暂未开放"}

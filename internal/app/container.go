@@ -38,6 +38,7 @@ func NewContainer(cfg Config, db *gorm.DB, redis *redis.Client) *Container {
 	}
 	//service
 	svc := service.New(repo, redis, wechatClient, authMiddleRepo)
+	middleware.SetUserAccessChecker(svc)
 	//handle
 	h := handler.New(svc)
 	//额外一层redismethod，这个层里写需要访问redis的方法，供auth中间件使用

@@ -10,4 +10,5 @@ type SiteSettingVO struct {
 	ProfileGithub     string `json:"profile_github"`
 	ProfileEmail      string `json:"profile_email"`
 	ProfileAvatar     string `json:"profile_avatar"`
+	ProfileAbout      string `json:"profile_about"`
 }

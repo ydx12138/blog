@@ -35,6 +35,7 @@ func DataBaseInit() (*gorm.DB, error) {
 	})
 	if err != nil {
 		zap.L().Error("database connection failed: " + err.Error())
+		zap.L().Error(config.Cfg.MysqlConfig.Password)
 		return nil, err
 	}
 	DB = db

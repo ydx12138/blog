@@ -13,8 +13,20 @@ import (
 
 var redisMiddleRepo repository.RedisMiddleRepository
 
+type UserAccessChecker interface {
+	// IsUserActive 检查用户账号是否可用；参数为用户 ID；返回可用状态和查询错误。
+	IsUserActive(userID uint64) (bool, error)
+}
+
+var userAccessChecker UserAccessChecker
+
 func SetRedisRepo(authMiddleRepo repository.RedisMiddleRepository) {
 	redisMiddleRepo = authMiddleRepo
+}
+
+// SetUserAccessChecker 注入用户状态检查器；参数为 Service 提供的状态检查能力；无返回值。
+func SetUserAccessChecker(checker UserAccessChecker) {
+	userAccessChecker = checker
 }
 
 // 用户token
@@ -47,24 +59,39 @@ func JWTAuth() gin.HandlerFunc {
 		}
 		//如果type==access,data.Valid==true有效，则通过
 		if claim.Type == "access" && data.Valid {
-			if claim.SessionID != "" {
-				if redisMiddleRepo == nil {
-					response.ErrWithMsg(code.InternalError, c)
-					c.Abort()
-					return
-				}
-				currentSession, err := redisMiddleRepo.GetUserSession(claim.UserID)
-				if err != nil {
-					zap.L().Error("read pc login session failed: " + err.Error())
-					response.ErrWithMsg(code.InternalError, c)
-					c.Abort()
-					return
-				}
-				if currentSession == "" || subtle.ConstantTimeCompare([]byte(currentSession), []byte(claim.SessionID)) != 1 {
-					response.ErrWithMsg(code.SessionReplaced, c)
-					c.Abort()
-					return
-				}
+			if claim.SessionID == "" || redisMiddleRepo == nil {
+				response.ErrWithMsg(code.SessionReplaced, c)
+				c.Abort()
+				return
+			}
+			currentSession, err := redisMiddleRepo.GetUserSession(claim.UserID)
+			if err != nil {
+				zap.L().Error("read pc login session failed: " + err.Error())
+				response.ErrWithMsg(code.InternalError, c)
+				c.Abort()
+				return
+			}
+			if currentSession == "" || subtle.ConstantTimeCompare([]byte(currentSession), []byte(claim.SessionID)) != 1 {
+				response.ErrWithMsg(code.SessionReplaced, c)
+				c.Abort()
+				return
+			}
+			if userAccessChecker == nil {
+				response.ErrWithMsg(code.InternalError, c)
+				c.Abort()
+				return
+			}
+			active, err := userAccessChecker.IsUserActive(claim.UserID)
+			if err != nil {
+				zap.L().Error("check user status failed: " + err.Error())
+				response.ErrWithMsg(code.InternalError, c)
+				c.Abort()
+				return
+			}
+			if !active {
+				response.ErrWithMsg(code.UserBanned, c)
+				c.Abort()
+				return
 			}
 			c.Set("userID", claim.UserID)
 			c.Set("role", claim.Role)
